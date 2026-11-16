@@ -260,6 +260,8 @@ def cli(argv):
 
 def main(argv=None):
     try:
+        from .files import setup_7zip
+        setup_7zip()
         return cli(sys.argv[1:] if argv is None else argv)
     except Err as e:
         sys.exit(f"Error: {e}")

@@ -390,10 +390,127 @@ def _strip_symlinks(root: Path):
                 raise Err("Archive contains symlink entries.")
 
 
+
+def _sevenzip_candidates():
+    import platform as _pl
+    base = None
+    try:
+        import sys as _s
+        if getattr(_s, "frozen", False) and hasattr(_s, "_MEIPASS"):
+            base = Path(_s._MEIPASS) / "tools"
+        else:
+            base = Path(__file__).parent / "resources" / "tools"
+    except Exception:
+        base = Path("resources/tools")
+    sysname = platform.system()
+    machine = platform.machine().lower()
+    cands = []
+    if sysname == "Windows":
+        if base:
+            cands.append((base / "windows" / "7za.exe", "included"))
+        cands += [(Path(r"C:\Program Files\7-Zip\7z.exe"), "system"),
+                  (Path(r"C:\Program Files (x86)\7-Zip\7z.exe"), "system")]
+    elif sysname == "Darwin":
+        if base:
+            cands.append((base / "macos" / "7zz", "included"))
+    else:
+        if base:
+            if "arm" in machine or "aarch64" in machine:
+                cands.append((base / "linux-arm64" / "7zz", "included"))
+            else:
+                cands.append((base / "linux-x64" / "7zz", "included"))
+    # PATH
+    for name in ("7z", "7zz", "7za"):
+        w = shutil.which(name)
+        if w:
+            cands.append((Path(w), "path"))
+    # fallback extractors
+    for name in ("unrar", "unar", "bsdtar"):
+        w = shutil.which(name)
+        if w:
+            cands.append((Path(w), "fallback:" + name))
+    return cands
+
+_SEVENZIP_PATH = None
+_SEVENZIP_SOURCE = None
+
+def find_7zip():
+    global _SEVENZIP_PATH, _SEVENZIP_SOURCE
+    if _SEVENZIP_PATH is not None:
+        return _SEVENZIP_PATH, _SEVENZIP_SOURCE
+    for p, src in _sevenzip_candidates():
+        if p and Path(p).is_file():
+            _SEVENZIP_PATH = str(p)
+            _SEVENZIP_SOURCE = src
+            return _SEVENZIP_PATH, _SEVENZIP_SOURCE
+    return None, None
+
+def setup_7zip():
+    p, src = find_7zip()
+    try:
+        import rarfile
+        if p:
+            rarfile.SEVENZIP_TOOL = p
+            try:
+                rarfile.tool_setup(force=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return p, src
+
+def sevenzip_version():
+    p, src = find_7zip()
+    if not p:
+        return None
+    try:
+        r = subprocess.run([p, "i"], capture_output=True, text=True, timeout=10)
+        for ln in (r.stdout or "").splitlines():
+            if "7-Zip" in ln:
+                return ln.strip()
+    except Exception:
+        pass
+    return src
+
+def sevenzip_extract(archive, out):
+    p, src = find_7zip()
+    if not p:
+        raise Err("No se pudo extraer el archivo: falta 7-Zip.")
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    creationflags = 0
+    if platform.system() == "Windows":
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        subprocess.run([p, "x", "-y", f"-o{out}", str(archive)],
+                      check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                      creationflags=creationflags)
+    except subprocess.CalledProcessError:
+        raise Err("No se pudo extraer el archivo: falta 7-Zip.")
+    # post-validate
+    for fp in out.rglob("*"):
+        if fp.is_symlink():
+            raise Err("Archive contains symlink entries.")
+    return True
+
+
 def extract(src: Path, out: Path):
     if src.is_dir():
         shutil.copytree(src, out, dirs_exist_ok=True)
         return
+    # Prefer bundled/system 7-Zip when available
+    try:
+        _p, _src = find_7zip()
+    except Exception:
+        _p, _src = None, None
+    if _p:
+        try:
+            sevenzip_extract(src, out)
+            return
+        except Err:
+            raise
+        except Exception as _e:
+            raise Err(f"No se pudo extraer el archivo: {_e}")
     # single known file types
     if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
         if src.stat().st_size > MAX_FILE_BYTES:
@@ -2157,6 +2274,13 @@ def run_gui(initial_user=None):
             ttk.Button(p, text="Change Game Data Folder...",
                        command=self.change_user).pack(anchor="w", pady=5)
             ttk.Label(p, text=f"Config location: {CFG}", style="Secondary.TLabel").pack(anchor="w", pady=5)
+            try:
+                from .files import find_7zip, sevenzip_version
+            except Exception:
+                from nwnmods.files import find_7zip, sevenzip_version
+            p7, src = find_7zip()
+            ver = sevenzip_version()
+            ttk.Label(p, text=f"7-Zip: {ver or p7 or 'not found'} ({src})", style="Secondary.TLabel").pack(anchor="w", pady=5)
 
         # ---- utilidades
         def log(self, msg):
@@ -2735,6 +2859,10 @@ def run_gui(initial_user=None):
         ttk.Button(frm, text="Advanced >>", command=lambda: (save_cfg({**load_cfg(), "basic_mode": False}), root.destroy(), run_gui(None))).pack(fill="x", pady=4)
         root.mainloop()
     else:
+        try:
+            setup_7zip()
+        except Exception:
+            pass
         App().mainloop()
 
 

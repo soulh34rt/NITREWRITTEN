@@ -57,3 +57,8 @@ Contributions are welcome! If you find a bug or have a feature request, please o
 ---
 
 *NITREWRITTEN is an independent project and is not affiliated with Beamdog, Bioware or Wizards of the Coast.*
+
+## Credits & Licenses
+
+- 7-Zip is used for archive extraction (LGPL). See `resources/tools/License.txt`.
+- 7-Zip homepage: https://www.7-zip.org/
