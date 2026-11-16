@@ -70,7 +70,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -287,7 +287,7 @@ def open_path(p):
 def launch(game: Game):
     if game.store == "Steam" and game.edition == "EE":
         open_path(f"steam://rungameid/{STEAM_APPID_EE}")
-        return
+        return None
     if not game.root:
         raise Err("No installation folder found to launch the game.")
     cands = sorted(game.root.glob("bin/*/nwmain*")) if game.edition == "EE" else [game.root / "nwmain.exe"]
@@ -297,7 +297,7 @@ def launch(game: Game):
     cmd = [str(exe)]
     if SYS != "Windows" and exe.suffix.lower() == ".exe":
         cmd = ["wine"] + cmd
-    subprocess.Popen(cmd, cwd=str(exe.parent))
+    return subprocess.Popen(cmd, cwd=str(exe.parent))
 
 
 # --------------------------------------------------------------------------- files
@@ -1493,6 +1493,140 @@ class Library:
             return Path(self._aliases()[parts[0]]) / Path(*parts[1:]) if len(parts) > 1 else Path(self._aliases()[parts[0]])
         return self.user / rel
 
+
+    def list_characters(self):
+        out = []
+        d = self.user / "localvault"
+        if not d.is_dir():
+            return out
+        owners = self.owners()
+        for f in sorted(d.glob("*.bic")):
+            try:
+                st = f.stat()
+            except OSError:
+                continue
+            key = f.relative_to(self.user).as_posix()
+            out.append({"name": f.stem, "path": str(f), "size": st.st_size,
+                        "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+                        "owner": owners.get(key, "(unmanaged)")})
+        return out
+
+
+    def list_portraits(self):
+        out = []
+        d = self.user / "portraits"
+        if not d.is_dir():
+            return out
+        owners = self.owners()
+        for f in sorted(d.rglob("*")):
+            if f.is_file():
+                key = f.relative_to(self.user).as_posix()
+                try:
+                    st = f.stat()
+                except OSError:
+                    continue
+                out.append({"name": f.name, "path": str(f), "size": st.st_size,
+                            "owner": owners.get(key, "(unmanaged)")})
+        return out
+
+
+    def _playtime_file(self):
+        return self.base / "playtime.json"
+
+    def _load_playtime(self):
+        try:
+            return json.loads(self._playtime_file().read_text(encoding="utf-8"))
+        except Exception:
+            return {"totals": {}, "pending": None, "sessions": []}
+
+    def _save_playtime(self, data):
+        self.base.mkdir(parents=True, exist_ok=True)
+        self._playtime_file().write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def recover_playtime(self):
+        data = self._load_playtime()
+        pending = data.get("pending")
+        if pending:
+            try:
+                start = datetime.fromisoformat(pending["start"])
+                dur = (datetime.now() - start).total_seconds()
+                if dur < 0:
+                    dur = 0
+                mod = pending.get("mod") or "(none)"
+                data["totals"][mod] = data["totals"].get(mod, 0) + dur
+                data.setdefault("sessions", []).append({
+                    "mod": mod, "start": pending["start"],
+                    "end": datetime.now().isoformat(timespec="seconds"),
+                    "duration": dur, "unexpected": True})
+            except Exception:
+                pass
+            data["pending"] = None
+            self._save_playtime(data)
+
+    def start_playtime(self, mod=None):
+        data = self._load_playtime()
+        self.recover_playtime()
+        data = self._load_playtime()
+        data["pending"] = {"mod": mod or "(none)", "start": datetime.now().isoformat(timespec="seconds")}
+        self._save_playtime(data)
+
+    def end_playtime(self):
+        data = self._load_playtime()
+        pending = data.get("pending")
+        if not pending:
+            return
+        try:
+            start = datetime.fromisoformat(pending["start"])
+            dur = (datetime.now() - start).total_seconds()
+            if dur < 0:
+                dur = 0
+            mod = pending.get("mod") or "(none)"
+            data["totals"][mod] = data["totals"].get(mod, 0) + dur
+            data.setdefault("sessions", []).append({
+                "mod": mod, "start": pending["start"],
+                "end": datetime.now().isoformat(timespec="seconds"),
+                "duration": dur, "unexpected": False})
+        except Exception:
+            pass
+        data["pending"] = None
+        self._save_playtime(data)
+
+    def playtime_report(self):
+        data = self._load_playtime()
+        if data.get("pending"):
+            self.recover_playtime()
+            data = self._load_playtime()
+        return data.get("totals", {}), data.get("sessions", [])
+
+
+    def nwn_log_files(self):
+        out = []
+        for cand in (self.user, self.user / "logs", self.user / "log"):
+            if cand.is_dir():
+                for f in cand.glob("*Log*.txt"):
+                    out.append(f)
+                for f in cand.glob("*.log"):
+                    out.append(f)
+        # dedupe
+        seen = set(); uniq = []
+        for f in out:
+            if str(f) not in seen:
+                seen.add(str(f)); uniq.append(f)
+        return uniq
+
+    def nwn_log_errors(self):
+        errs = []
+        for f in self.nwn_log_files():
+            try:
+                lines = f.read_text(errors="replace").splitlines()
+            except OSError:
+                continue
+            for ln in lines[-500:]:
+                low = ln.lower()
+                if "error" in low or "assert" in low or "fatal" in low:
+                    errs.append(f"{f.name}: {ln}")
+        return errs
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
@@ -2013,6 +2147,9 @@ def run_gui(initial_user=None):
             
             ttk.Checkbutton(p, text="Convert BIK to WBM for EE (requires FFmpeg)",
                             variable=self.v_convert_bik, command=self.save_settings).pack(anchor="w", pady=8)
+            ttk.Checkbutton(p, text="Basic mode (restart required)",
+                            variable=tk.BooleanVar(value=load_cfg().get("basic_mode", False)),
+                            command=lambda: save_cfg({**load_cfg(), "basic_mode": not load_cfg().get("basic_mode", False)})).pack(anchor="w", pady=8)
             ttk.Button(p, text="Convert BIK files now", command=self.convert_bik_ui).pack(anchor="w", pady=4)
             
             ttk.Separator(p, orient="horizontal").pack(fill="x", pady=20)
@@ -2124,8 +2261,32 @@ def run_gui(initial_user=None):
                 self.set_game(self.combo.current())
 
         def play(self):
-            if self.game:
-                self.guard(launch, self.game)
+            if self.game and self.lib:
+                self.lib.start_playtime(self.lib.active_save_mod())
+                proc = self.guard(launch, self.game)
+                if proc is not None:
+                    def watcher():
+                        try:
+                            proc.wait()
+                        except Exception:
+                            pass
+                        try:
+                            self.lib.end_playtime()
+                        except Exception:
+                            pass
+                        errs = []
+                        try:
+                            errs = self.lib.nwn_log_errors()
+                        except Exception:
+                            errs = []
+                        if errs:
+                            msg = "\\n".join(errs[:20])
+                            try:
+                                self.after(0, lambda m=msg: messagebox.showwarning("NWN log", m))
+                            except Exception:
+                                pass
+                    import threading
+                    threading.Thread(target=watcher, daemon=True).start()
 
         # ---- refrescos
         def refresh_all(self):
@@ -2559,7 +2720,22 @@ def run_gui(initial_user=None):
                 self.guard(self.lib.restore, self.lib.base / "backups" / self.lb_bak.get(s[0]))
                 self.log("✔ Backup restored")
 
-    App().mainloop()
+    cfg = load_cfg()
+    if cfg.get("basic_mode"):
+        # Minimal launcher window
+        root = tk.Tk()
+        root.title("NitRewritten - Basic")
+        root.geometry("320x180")
+        ttk.Label(root, text="NitRewritten", font=("Segoe UI", 14, "bold")).pack(pady=10)
+        frm = ttk.Frame(root, padding=10)
+        frm.pack(fill="both", expand=True)
+        ttk.Button(frm, text="Install mod...", command=lambda: (run_gui(None), root.destroy())).pack(fill="x", pady=4)
+        ttk.Button(frm, text="Launch Game", command=lambda: None).pack(fill="x", pady=4)
+        ttk.Button(frm, text="Exit", command=root.destroy).pack(fill="x", pady=4)
+        ttk.Button(frm, text="Advanced >>", command=lambda: (save_cfg({**load_cfg(), "basic_mode": False}), root.destroy(), run_gui(None))).pack(fill="x", pady=4)
+        root.mainloop()
+    else:
+        App().mainloop()
 
 
 # --------------------------------------------------------------------------- CLI

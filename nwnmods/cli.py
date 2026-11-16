@@ -43,6 +43,9 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    sp.add_parser("playtime")
+    sp.add_parser("portraits")
+    sp.add_parser("chars")
     al = sp.add_parser("alias"); als = al.add_subparsers(dest="alias_cmd")
     als.add_parser("list")
     aset = als.add_parser("set"); aset.add_argument("sub"); aset.add_argument("path")
@@ -215,8 +218,28 @@ def cli(argv):
         elif ac == "remove":
             cfg["folder_aliases"].pop(a.sub, None)
             save_cfg(cfg); print(f"[OK] alias removed: {a.sub}")
+    elif a.cmd == "chars":
+        for c in lib.list_characters():
+            print(f"{c['name']}  {c['size']} B  owner={c['owner']}  {c['mtime']}")
+    elif a.cmd == "portraits":
+        for pt in lib.list_portraits():
+            print(f"{pt['name']}  {pt['size']} B  owner={pt['owner']}")
+    elif a.cmd == "playtime":
+        totals, sessions = lib.playtime_report()
+        for mod, secs in totals.items():
+            print(f"{mod}: {secs:.0f} s")
+        print(f"Sessions: {len(sessions)}")
     elif a.cmd == "launch":
-        launch(g)
+        if lib is not None:
+            lib.start_playtime(lib.active_save_mod())
+        proc = launch(g)
+        if proc is not None:
+            try:
+                proc.wait()
+            except Exception:
+                pass
+            if lib is not None:
+                lib.end_playtime()
     elif a.cmd == "saves":
         sc = getattr(a, "saves_cmd", None)
         if sc == "list" or sc is None:

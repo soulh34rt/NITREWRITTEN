@@ -695,6 +695,140 @@ class Library:
             return Path(self._aliases()[parts[0]]) / Path(*parts[1:]) if len(parts) > 1 else Path(self._aliases()[parts[0]])
         return self.user / rel
 
+
+    def list_characters(self):
+        out = []
+        d = self.user / "localvault"
+        if not d.is_dir():
+            return out
+        owners = self.owners()
+        for f in sorted(d.glob("*.bic")):
+            try:
+                st = f.stat()
+            except OSError:
+                continue
+            key = f.relative_to(self.user).as_posix()
+            out.append({"name": f.stem, "path": str(f), "size": st.st_size,
+                        "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+                        "owner": owners.get(key, "(unmanaged)")})
+        return out
+
+
+    def list_portraits(self):
+        out = []
+        d = self.user / "portraits"
+        if not d.is_dir():
+            return out
+        owners = self.owners()
+        for f in sorted(d.rglob("*")):
+            if f.is_file():
+                key = f.relative_to(self.user).as_posix()
+                try:
+                    st = f.stat()
+                except OSError:
+                    continue
+                out.append({"name": f.name, "path": str(f), "size": st.st_size,
+                            "owner": owners.get(key, "(unmanaged)")})
+        return out
+
+
+    def _playtime_file(self):
+        return self.base / "playtime.json"
+
+    def _load_playtime(self):
+        try:
+            return json.loads(self._playtime_file().read_text(encoding="utf-8"))
+        except Exception:
+            return {"totals": {}, "pending": None, "sessions": []}
+
+    def _save_playtime(self, data):
+        self.base.mkdir(parents=True, exist_ok=True)
+        self._playtime_file().write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def recover_playtime(self):
+        data = self._load_playtime()
+        pending = data.get("pending")
+        if pending:
+            try:
+                start = datetime.fromisoformat(pending["start"])
+                dur = (datetime.now() - start).total_seconds()
+                if dur < 0:
+                    dur = 0
+                mod = pending.get("mod") or "(none)"
+                data["totals"][mod] = data["totals"].get(mod, 0) + dur
+                data.setdefault("sessions", []).append({
+                    "mod": mod, "start": pending["start"],
+                    "end": datetime.now().isoformat(timespec="seconds"),
+                    "duration": dur, "unexpected": True})
+            except Exception:
+                pass
+            data["pending"] = None
+            self._save_playtime(data)
+
+    def start_playtime(self, mod=None):
+        data = self._load_playtime()
+        self.recover_playtime()
+        data = self._load_playtime()
+        data["pending"] = {"mod": mod or "(none)", "start": datetime.now().isoformat(timespec="seconds")}
+        self._save_playtime(data)
+
+    def end_playtime(self):
+        data = self._load_playtime()
+        pending = data.get("pending")
+        if not pending:
+            return
+        try:
+            start = datetime.fromisoformat(pending["start"])
+            dur = (datetime.now() - start).total_seconds()
+            if dur < 0:
+                dur = 0
+            mod = pending.get("mod") or "(none)"
+            data["totals"][mod] = data["totals"].get(mod, 0) + dur
+            data.setdefault("sessions", []).append({
+                "mod": mod, "start": pending["start"],
+                "end": datetime.now().isoformat(timespec="seconds"),
+                "duration": dur, "unexpected": False})
+        except Exception:
+            pass
+        data["pending"] = None
+        self._save_playtime(data)
+
+    def playtime_report(self):
+        data = self._load_playtime()
+        if data.get("pending"):
+            self.recover_playtime()
+            data = self._load_playtime()
+        return data.get("totals", {}), data.get("sessions", [])
+
+
+    def nwn_log_files(self):
+        out = []
+        for cand in (self.user, self.user / "logs", self.user / "log"):
+            if cand.is_dir():
+                for f in cand.glob("*Log*.txt"):
+                    out.append(f)
+                for f in cand.glob("*.log"):
+                    out.append(f)
+        # dedupe
+        seen = set(); uniq = []
+        for f in out:
+            if str(f) not in seen:
+                seen.add(str(f)); uniq.append(f)
+        return uniq
+
+    def nwn_log_errors(self):
+        errs = []
+        for f in self.nwn_log_files():
+            try:
+                lines = f.read_text(errors="replace").splitlines()
+            except OSError:
+                continue
+            for ln in lines[-500:]:
+                low = ln.lower()
+                if "error" in low or "assert" in low or "fatal" in low:
+                    errs.append(f"{f.name}: {ln}")
+        return errs
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():

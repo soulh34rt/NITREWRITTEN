@@ -202,7 +202,7 @@ def open_path(p):
 def launch(game: Game):
     if game.store == "Steam" and game.edition == "EE":
         open_path(f"steam://rungameid/{STEAM_APPID_EE}")
-        return
+        return None
     if not game.root:
         raise Err("No installation folder found to launch the game.")
     cands = sorted(game.root.glob("bin/*/nwmain*")) if game.edition == "EE" else [game.root / "nwmain.exe"]
@@ -212,7 +212,7 @@ def launch(game: Game):
     cmd = [str(exe)]
     if SYS != "Windows" and exe.suffix.lower() == ".exe":
         cmd = ["wine"] + cmd
-    subprocess.Popen(cmd, cwd=str(exe.parent))
+    return subprocess.Popen(cmd, cwd=str(exe.parent))
 
 
 def steam_workshop_items():
