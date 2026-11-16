@@ -26,6 +26,10 @@ class Library:
                 sys.stderr.write(f"nwnmods: could not read manifest {self.mf}: {e!r}\n")
         self.d.setdefault("groups", {})
         self._migrate()
+        try:
+            self.recover_playtime()
+        except Exception:
+            pass
 
     @property
     def mods(self) -> dict:

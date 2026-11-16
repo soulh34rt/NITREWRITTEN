@@ -333,3 +333,167 @@ def test_groups(lib, tmp_path):
     lib.delete_group("g1")
     assert "g1" not in lib.groups()
     assert lib.mods["a"].get("group") == ""
+
+# ---- Fase B ----
+
+def test_ext_map_configurable():
+    assert nwnmods.map_path(Path("m/x.hak"), True, ext_map={".hak": "custom"}) == Path("custom/x.hak")
+    # custom ignore_ext replaces the defaults
+    assert nwnmods.map_path(Path("m/a.hak"), True, ignore_ext={".hak"}) is None
+    assert nwnmods.map_path(Path("m/a.txt"), True, ignore_ext={".hak"}) == Path("override/a.txt")
+    assert nwnmods.map_path(Path("m/README"), True, ignore_names={"readme"}) is None
+
+
+def test_export_import_mod_roundtrip(lib, user_dir, tmp_path):
+    z = tmp_path / "exp.zip"
+    make_zip(z, [("hak/exp.hak", b"data")])
+    lib.install(z, name="exp")
+    lib.set_notes("exp", "a note")
+    dest = tmp_path / "exported.zip"
+    lib.export_mod("exp", dest)
+
+    user2 = tmp_path / "u2"
+    user2.mkdir()
+    lib2 = nwnmods.Library(user2)
+    lib2.import_mod(dest)
+    assert lib2.mods["exp"]["enabled"] is True
+    assert lib2.mods["exp"]["notes"] == "a note"
+    assert (user2 / "hak" / "exp.hak").read_bytes() == b"data"
+
+
+def test_export_import_profile(lib, tmp_path):
+    z = tmp_path / "p.zip"
+    make_zip(z, [("hak/p.hak", b"p")])
+    lib.install(z, name="p")
+    lib.save_profile("profile1")
+    dest = tmp_path / "profile1.json"
+    lib.export_profile("profile1", dest)
+
+    user2 = tmp_path / "u2"
+    user2.mkdir()
+    lib2 = nwnmods.Library(user2)
+    lib2.import_profile(dest)
+    assert lib2.d["profiles"]["profile1"] == ["p"]
+
+
+def test_folder_aliases(lib, user_dir, tmp_path, monkeypatch):
+    alt = tmp_path / "alt-hak"
+    alt.mkdir()
+    cfg_path = tmp_path / "cfg.json"
+    cfg_path.write_text(json.dumps({"folder_aliases": {"hak": str(alt)}}), encoding="utf-8")
+    monkeypatch.setattr(nwnmods.config, "CFG", cfg_path)
+    assert lib.content_dir("hak") == alt
+    assert lib.content_path("hak/x.hak") == alt / "x.hak"
+    # not aliased -> normal user path
+    assert lib.content_path("override/y.ncs") == user_dir / "override" / "y.ncs"
+
+
+def test_bik_discovery_and_convert(lib, user_dir, monkeypatch):
+    mv = user_dir / "movies"
+    mv.mkdir()
+    bik = mv / "intro.bik"
+    bik.write_bytes(b"bik")
+    assert bik in lib.find_bik_without_wbm()
+    wbm = mv / "intro.wbm"
+    wbm.write_bytes(b"wbm")
+    assert bik not in lib.find_bik_without_wbm()
+    wbm.unlink()
+
+    import subprocess as sp_mod
+
+    def fake_run(cmd, **kw):
+        Path(cmd[-1]).write_bytes(b"converted")
+        return sp_mod.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(sp_mod, "run", fake_run)
+    out = lib.convert_bik(ffmpeg="ffmpeg-fake")
+    assert out == [wbm]
+    assert wbm.read_bytes() == b"converted"
+
+
+def test_steam_workshop_items_is_list():
+    assert isinstance(nwnmods.steam_workshop_items(), list)
+
+
+def test_bundled_7zip_extracts_zip(tmp_path):
+    from nwnmods.files import find_7zip, sevenzip_extract
+
+    p, src = find_7zip()
+    assert p and Path(p).is_file()
+    zp = tmp_path / "a.zip"
+    make_zip(zp, [("hak/z.hak", b"zz")])
+    out = tmp_path / "out"
+    out.mkdir()
+    sevenzip_extract(zp, out)
+    assert (out / "hak" / "z.hak").read_bytes() == b"zz"
+
+
+# ---- Fase C ----
+
+def test_list_characters_and_portraits(lib, user_dir):
+    lv = user_dir / "localvault"
+    lv.mkdir()
+    (lv / "hero.bic").write_bytes(b"bic")
+    p = user_dir / "portraits"
+    p.mkdir()
+    (p / "po_hero.tga").write_bytes(b"tga")
+
+    chars = lib.list_characters()
+    assert [c["name"] for c in chars] == ["hero"]
+    assert chars[0]["owner"] == "(unmanaged)"
+    assert chars[0]["size"] == 3
+
+    pts = lib.list_portraits()
+    assert [x["name"] for x in pts] == ["po_hero.tga"]
+
+
+def test_playtime_roundtrip(lib):
+    lib.start_playtime("modX")
+    lib.end_playtime()
+    totals, sessions = lib.playtime_report()
+    assert "modX" in totals
+    assert len(sessions) == 1
+    assert sessions[0]["unexpected"] is False
+
+
+def test_playtime_recover_after_crash(lib):
+    lib.base.mkdir(parents=True, exist_ok=True)
+    (lib.base / "playtime.json").write_text(json.dumps({
+        "totals": {}, "pending": {"mod": "ghost", "start": "2020-01-01T00:00:00"},
+        "sessions": []}), encoding="utf-8")
+    lib2 = nwnmods.Library(lib.user)
+    totals, sessions = lib2.playtime_report()
+    assert totals.get("ghost", 0) > 0
+    assert sessions and sessions[0]["unexpected"] is True
+
+
+def test_nwn_log_errors(lib, user_dir):
+    logs = user_dir / "logs"
+    logs.mkdir()
+    (logs / "nwserver.log").write_text("hello\nERROR: something failed\n", encoding="utf-8")
+    errs = lib.nwn_log_errors()
+    assert any("ERROR" in e for e in errs)
+
+
+def test_config_basic_mode_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(nwnmods, "CFG", tmp_path / "nope.json")
+    assert nwnmods.load_cfg()["basic_mode"] is False
+
+
+def test_cli_chars_and_portraits(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    user = tmp_path / "userdata"
+    (user / "localvault").mkdir(parents=True)
+    (user / "localvault" / "hero.bic").write_bytes(b"x")
+    (user / "portraits").mkdir()
+    (user / "portraits" / "po_a.tga").write_bytes(b"x")
+
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "chars"],
+                       cwd=root, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert "hero" in r.stdout
+
+    r2 = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "portraits"],
+                        cwd=root, capture_output=True, text=True)
+    assert r2.returncode == 0, r2.stderr
+    assert "po_a.tga" in r2.stdout
