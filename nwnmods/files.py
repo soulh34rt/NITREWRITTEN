@@ -97,14 +97,18 @@ def _strip_symlinks(root: Path):
 
 
 def _sevenzip_candidates():
-    import platform as _pl
     base = None
     try:
         import sys as _s
         if getattr(_s, "frozen", False) and hasattr(_s, "_MEIPASS"):
             base = Path(_s._MEIPASS) / "tools"
         else:
-            base = Path(__file__).parent / "resources" / "tools"
+            here = Path(__file__).parent
+            for cand in (here / "resources" / "tools", here.parent / "resources" / "tools"):
+                if cand.is_dir():
+                    base = cand
+                    break
+            base = base or (here / "resources" / "tools")
     except Exception:
         base = Path("resources/tools")
     sysname = platform.system()
@@ -204,9 +208,87 @@ def sevenzip_extract(archive, out):
     return True
 
 
+
+def validate_members(src):
+    """Pre-validate archive members before handing the file to 7-Zip."""
+    try:
+        if zipfile.is_zipfile(src):
+            with zipfile.ZipFile(src) as z:
+                infos = z.infolist()
+                if len(infos) > MAX_ENTRIES:
+                    raise Err("Archive has too many entries.")
+                total = 0
+                for m in infos:
+                    _safe_member_name(m.filename)
+                    if m.file_size > MAX_FILE_BYTES:
+                        raise Err("Archive member too large.")
+                    total += m.file_size
+                    _check_total(total)
+                    mode = (m.external_attr >> 16) & 0xFFFF
+                    if (mode & 0xF000) == 0xA000:
+                        raise Err("Archive contains symlink entries.")
+            return
+        if tarfile.is_tarfile(src):
+            with tarfile.open(src) as t:
+                members = t.getmembers()
+                if len(members) > MAX_ENTRIES:
+                    raise Err("Archive has too many entries.")
+                total = 0
+                for m in members:
+                    _safe_member_name(m.name)
+                    if m.isfile():
+                        if m.size > MAX_FILE_BYTES:
+                            raise Err("Archive member too large.")
+                        total += m.size
+                        _check_total(total)
+                    if m.issym() or m.islnk() or m.isdev() or m.ischr() or m.isblk() or m.isfifo():
+                        raise Err("Archive contains unsafe entry types.")
+            return
+        if src.suffix.lower() == ".7z":
+            try:
+                import py7zr  # type: ignore
+                with py7zr.SevenZipFile(src) as z:
+                    names = z.getnames()
+                    if len(names) > MAX_ENTRIES:
+                        raise Err("Archive has too many entries.")
+                    for n in names:
+                        _safe_member_name(n)
+            except ImportError:
+                pass
+            return
+        if src.suffix.lower() == ".rar":
+            try:
+                import rarfile  # type: ignore
+                with rarfile.RarFile(src) as rf:
+                    infos = rf.infolist()
+                    if len(infos) > MAX_ENTRIES:
+                        raise Err("Archive has too many entries.")
+                    total = 0
+                    for m in infos:
+                        _safe_member_name(m.filename)
+                        if m.file_size > MAX_FILE_BYTES:
+                            raise Err("Archive member too large.")
+                        total += m.file_size
+                        _check_total(total)
+            except ImportError:
+                pass
+            return
+    except Err:
+        raise
+    except Exception:
+        # Unknown/corrupt container: let 7-Zip produce the real error.
+        return
+
+
 def extract(src: Path, out: Path):
     if src.is_dir():
         shutil.copytree(src, out, dirs_exist_ok=True)
+        return
+    # single known file types
+    if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
+        if src.stat().st_size > MAX_FILE_BYTES:
+            raise Err("File too large.")
+        shutil.copy2(src, out / src.name)
         return
     # Prefer bundled/system 7-Zip when available
     try:
@@ -215,17 +297,13 @@ def extract(src: Path, out: Path):
         _p, _src = None, None
     if _p:
         try:
+            validate_members(src)
             sevenzip_extract(src, out)
             return
         except Err:
             raise
         except Exception as _e:
             raise Err(f"No se pudo extraer el archivo: {_e}")
-    if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
-        if src.stat().st_size > MAX_FILE_BYTES:
-            raise Err("File too large.")
-        shutil.copy2(src, out / src.name)
-        return
 
     if zipfile.is_zipfile(src):
         with zipfile.ZipFile(src) as z:
