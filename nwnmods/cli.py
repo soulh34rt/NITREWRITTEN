@@ -34,6 +34,17 @@ def cli(argv):
     for c in ("list", "conflicts", "backup", "launch"):
         sp.add_parser(c)
     sp.add_parser("restore").add_argument("zip")
+    # saves manager
+    sv = sp.add_parser("saves")
+    ssv = sv.add_subparsers(dest="saves_cmd")
+    ssv.add_parser("list")
+    sw = ssv.add_parser("switch")
+    sw.add_argument("mod")
+    sa = ssv.add_parser("archive")
+    sa.add_argument("mod")
+    sr = ssv.add_parser("restore")
+    sr.add_argument("mod")
+    sr.add_argument("--from-archive", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
         return run_gui(a.user)
@@ -69,6 +80,22 @@ def cli(argv):
         lib.restore(a.zip)
     elif a.cmd == "launch":
         launch(g)
+    elif a.cmd == "saves":
+        sc = getattr(a, "saves_cmd", None)
+        if sc == "list" or sc is None:
+            rows, active = lib.saves_list()
+            print(f"Active save set: {active or '(none)'}")
+            for sub, rel, size, owner in rows:
+                print(f"{sub}/{rel}  {size} bytes  [{owner}]")
+        elif sc == "switch":
+            lib.saves_switch(a.mod)
+            print(f"[OK] switched saves to '{a.mod}'")
+        elif sc == "archive":
+            p = lib.saves_archive(a.mod)
+            print(f"[OK] archived: {p}")
+        elif sc == "restore":
+            lib.saves_restore(a.mod, from_archive=a.from_archive)
+            print(f"[OK] restored saves for '{a.mod}'")
 
 
 def main(argv=None):

@@ -233,3 +233,13 @@ def test_script_and_package_entrypoints_operate_on_temporary_user(tmp_path):
     assert "cli-mod" in installed.stdout
     assert "cli-mod" in listed.stdout
     assert (user / "hak" / "cli.hak").exists() is False
+
+
+def test_saves_switch_never_deletes(lib, user_dir):
+    (user_dir / "saves").mkdir(parents=True, exist_ok=True)
+    (user_dir / "saves" / "a.sav").write_bytes(b"hello")
+    lib.saves_switch("modA")
+    assert not (user_dir / "saves" / "a.sav").exists()
+    stash = user_dir / ".nwnmods" / "saves" / "_default" / "saves" / "a.sav"
+    assert stash.exists()
+    assert stash.read_bytes() == b"hello"

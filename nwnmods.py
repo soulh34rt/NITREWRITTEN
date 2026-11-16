@@ -810,7 +810,7 @@ class Library:
         self.user = Path(user)
         self.base = self.user / ".nwnmods"
         self.mf = self.base / "manifest.json"
-        self.d = {"mods": {}, "profiles": {}}
+        self.d = {"mods": {}, "profiles": {}, "active_save_mod": None}
         if self.mf.exists():
             try:
                 self.d.update(json.loads(self.mf.read_text(encoding="utf-8")))
@@ -1140,6 +1140,138 @@ class Library:
                     raise Err("Backup contains insecure paths.")
             z.extractall(self.user)
 
+    PARTY_FOLDERS = ("saves", "localvault", "servervault", "dmvault")
+
+    def _save_set_dir(self, mod):
+        key = (mod if mod else "_default")
+        # sanitize
+        key = re.sub(r'[\\/:*?"<>|]+', "-", str(key)).strip() or "_default"
+        return self.base / "saves" / key
+
+    def active_save_mod(self):
+        return self.d.get("active_save_mod")
+
+    def saves_list(self):
+        """Return (rows, active_mod). rows: (folder, relpath, size, owner_mod)."""
+        rows = []
+        active = self.d.get("active_save_mod")
+        for sub in self.PARTY_FOLDERS:
+            d = self.user / sub
+            if d.is_dir():
+                for f in d.rglob("*"):
+                    if f.is_file():
+                        try:
+                            rows.append((sub, f.relative_to(self.user).as_posix(), f.stat().st_size, active or "(none)"))
+                        except OSError:
+                            rows.append((sub, f.relative_to(self.user).as_posix(), 0, active or "(none)"))
+        saves_root = self.base / "saves"
+        if saves_root.is_dir():
+            for mod_dir in sorted(saves_root.iterdir()):
+                if not mod_dir.is_dir():
+                    continue
+                mod = mod_dir.name
+                if mod == (active if active else "_default"):
+                    continue
+                label = "(default)" if mod == "_default" else mod
+                for sub in self.PARTY_FOLDERS:
+                    d = mod_dir / sub
+                    if d.is_dir():
+                        for f in d.rglob("*"):
+                            if f.is_file():
+                                try:
+                                    rows.append((sub, f.relative_to(mod_dir).as_posix(), f.stat().st_size, label))
+                                except OSError:
+                                    rows.append((sub, f.relative_to(mod_dir).as_posix(), 0, label))
+        return rows, active
+
+    def saves_switch(self, mod):
+        active = self.d.get("active_save_mod")
+        if active == mod:
+            return
+        # stash current live saves into active's set
+        active_key = active if active else "_default"
+        stash_dir = self._save_set_dir(active_key)
+        stash_dir.mkdir(parents=True, exist_ok=True)
+        for sub in self.PARTY_FOLDERS:
+            src = self.user / sub
+            dst = stash_dir / sub
+            if src.is_dir():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.exists():
+                    # merge into existing stash
+                    for f in src.rglob("*"):
+                        if f.is_file():
+                            rel = f.relative_to(src)
+                            (dst / rel).parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(f), str(dst / rel))
+                    # remove now-empty dirs
+                    for f in sorted(src.rglob("*"), reverse=True):
+                        if f.is_dir():
+                            try:
+                                f.rmdir()
+                            except OSError:
+                                pass
+                else:
+                    shutil.move(str(src), str(dst))
+        # restore target's set
+        new_dir = self._save_set_dir(mod)
+        for sub in self.PARTY_FOLDERS:
+            src = new_dir / sub
+            dst = self.user / sub
+            if src.is_dir():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.exists():
+                    # move any leftover into stash of target? should be empty; merge just in case
+                    for f in dst.rglob("*"):
+                        if f.is_file():
+                            rel = f.relative_to(dst)
+                            (src / rel).parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(f), str(src / rel))
+                    for f in sorted(dst.rglob("*"), reverse=True):
+                        if f.is_dir():
+                            try:
+                                f.rmdir()
+                            except OSError:
+                                pass
+                shutil.move(str(src), str(dst))
+        self.d["active_save_mod"] = mod
+        self.save()
+
+    def saves_archive(self, mod):
+        d = self._save_set_dir(mod)
+        if not d.exists():
+            raise Err("No saved set for this mod.")
+        dest = self.base / "saves_archive" / f"{mod}.zip"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        n = 0
+        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in d.rglob("*"):
+                if f.is_file():
+                    z.write(f, f.relative_to(d).as_posix())
+                    n += 1
+        if not n:
+            dest.unlink(missing_ok=True)
+            raise Err("No files to archive.")
+        shutil.rmtree(d, ignore_errors=True)
+        return dest
+
+    def saves_restore(self, mod, from_archive=False):
+        d = self._save_set_dir(mod)
+        if from_archive:
+            zp = self.base / "saves_archive" / f"{mod}.zip"
+            if not zp.exists():
+                raise Err("No archive for this mod.")
+            d.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(zp) as z:
+                for m in z.infolist():
+                    if not _inside(d, m.filename):
+                        raise Err("Archive contains insecure paths.")
+                z.extractall(d)
+        if not d.exists():
+            raise Err("No saved set for this mod.")
+        self.saves_switch(mod)
+        return d
+
 
 # --------------------------------------------------------------------------- GUI
 def run_gui(initial_user=None):
@@ -1393,6 +1525,61 @@ def run_gui(initial_user=None):
             self.lb_bak = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid")
             self.lb_bak.pack(fill="both", expand=True, pady=5)
 
+            ttk.Separator(p, orient="horizontal").pack(fill="x", pady=6)
+            ttk.Label(p, text="Save sets (per mod/campaign):", style="Secondary.TLabel").pack(anchor="w")
+            self.lb_saves = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid", height=6)
+            self.lb_saves.pack(fill="x", pady=4)
+            bf = ttk.Frame(p)
+            bf.pack(fill="x")
+            for txt, fn in (("List", self.saves_list_ui), ("Switch", self.saves_switch_ui),
+                            ("Archive", self.saves_archive_ui), ("Restore", self.saves_restore_ui)):
+                ttk.Button(bf, text=txt, command=fn).pack(side="left", padx=2)
+
+        def refresh_saves(self):
+            if not hasattr(self, "lb_saves") or not self.lib:
+                return
+            self.lb_saves.delete(0, "end")
+            rows, active = self.lib.saves_list()
+            self.lb_saves.insert("end", f"Active: {active or '(none)'}")
+            for sub, rel, size, owner in rows[:200]:
+                self.lb_saves.insert("end", f"{owner} | {sub}/{rel} ({size} B)")
+
+        def saves_list_ui(self):
+            if not self._need_lib():
+                return
+            self.refresh_saves()
+            rows, active = self.lib.saves_list()
+            self._text_window("Save sets", "\n".join(f"{o} | {s}/{r} ({sz} B)" for s, r, sz, o in rows) or "No saves.")
+
+        def saves_switch_ui(self):
+            if not self._need_lib():
+                return
+            mod = simpledialog.askstring("Switch saves", "Mod/campaign name:")
+            if mod:
+                self.guard(self.lib.saves_switch, mod)
+                self.log(f"Saves switched to '{mod}'")
+                self.refresh_saves()
+
+        def saves_archive_ui(self):
+            if not self._need_lib():
+                return
+            mod = simpledialog.askstring("Archive saves", "Mod/campaign name:")
+            if mod:
+                p = self.guard(self.lib.saves_archive, mod)
+                if p:
+                    self.log(f"Archived saves: {p}")
+                    self.refresh_saves()
+
+        def saves_restore_ui(self):
+            if not self._need_lib():
+                return
+            mod = simpledialog.askstring("Restore saves", "Mod/campaign name:")
+            if mod:
+                froma = messagebox.askyesno("From archive?", "Restore from compressed archive?")
+                self.guard(self.lib.saves_restore, mod, from_archive=froma)
+                self.log(f"Restored saves for '{mod}'")
+                self.refresh_saves()
+
         def _build_settings(self):
             p = self.tab_set
             ttk.Checkbutton(p, text="Dark Mode",
@@ -1518,6 +1705,7 @@ def run_gui(initial_user=None):
             self.refresh_content()
             self.refresh_profiles()
             self.refresh_backups()
+            self.refresh_saves()
             if hasattr(self, "status_right") and self.lib:
                 self.status_right.configure(text=f"{len(self.lib.mods)} mods")
 
