@@ -211,8 +211,8 @@ def test_script_and_package_entrypoints_show_help():
     package = subprocess.run([sys.executable, "-m", "nwnmods", "--help"], cwd=root,
                              capture_output=True, text=True, check=True)
 
-    assert "Professional Mod Manager" in script.stdout
-    assert "Professional Mod Manager" in package.stdout
+    assert "Mod Manager for Neverwinter Nights" in script.stdout
+    assert "Mod Manager for Neverwinter Nights" in package.stdout
 
 
 def test_script_and_package_entrypoints_operate_on_temporary_user(tmp_path):

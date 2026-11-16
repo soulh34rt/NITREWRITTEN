@@ -18,7 +18,7 @@ def pick(args):
 
 
 def cli(argv):
-    ap = argparse.ArgumentParser(prog="nwnmods", description="Professional Mod Manager for Neverwinter Nights")
+    ap = argparse.ArgumentParser(prog="nwnmods", description="Mod Manager for Neverwinter Nights")
     ap.add_argument("--game", type=int, default=0, help="index shown by 'detect'")
     ap.add_argument("--user", help="data folder (hak, override, modules...)")
     sp = ap.add_subparsers(dest="cmd")

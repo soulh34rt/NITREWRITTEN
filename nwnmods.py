@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""nwnmods - Professional Mod Manager for Neverwinter Nights (Enhanced Edition and Diamond).
+"""nwnmods - Mod Manager for Neverwinter Nights (Enhanced Edition and Diamond).
 
 Works on Windows, Linux, and macOS. Uses Python 3.8+ standard library.
 (UI uses tkinter; 7-Zip recommended for .7z/.rar support).
@@ -1146,7 +1146,7 @@ def run_gui(initial_user=None):
     class App(tk.Tk):
         def __init__(self):
             super().__init__()
-            self.title("NITREWRITTEN - Professional NWN Mod Manager")
+            self.title("NITREWRITTEN - NWN Mod Manager")
             self.geometry("1100x850")
             self.minsize(900, 700)
             
@@ -1932,7 +1932,7 @@ def pick(args):
 
 
 def cli(argv):
-    ap = argparse.ArgumentParser(prog="nwnmods", description="Professional Mod Manager for Neverwinter Nights")
+    ap = argparse.ArgumentParser(prog="nwnmods", description="Mod Manager for Neverwinter Nights")
     ap.add_argument("--game", type=int, default=0, help="index shown by 'detect'")
     ap.add_argument("--user", help="data folder (hak, override, modules...)")
     sp = ap.add_subparsers(dest="cmd")
