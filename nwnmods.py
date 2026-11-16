@@ -1184,14 +1184,17 @@ def run_gui(initial_user=None):
 
         def _apply_theme(self):
             dark = self.v_dark.get()
-            bg = "#1e1e1e" if dark else "#ffffff"
-            fg = "#e0e0e0" if dark else "#000000"
-            header_fg = "#4daafc" if dark else "#1a73e8"
-            btn_active = "#333333" if dark else "#e8f0fe"
-            tree_bg = "#2d2d2d" if dark else "#ffffff"
-            tree_fg = "#ffffff" if dark else "#000000"
-            field_bg = "#333333" if dark else "#ffffff"
-            secondary_fg = "#888888" if dark else "#666666"
+            bg = "#1E1E1E" if dark else "#ffffff"
+            panel = "#252526" if dark else "#f3f3f3"
+            fg = "#E0E0E0" if dark else "#000000"
+            header_fg = "#4DA3FF" if dark else "#1a73e8"
+            btn_bg = "#333337" if dark else "#e1e1e1"
+            btn_active = "#3C3C3C" if dark else "#d0d0d0"
+            tree_bg = "#252526" if dark else "#ffffff"
+            tree_fg = "#E0E0E0" if dark else "#000000"
+            field_bg = "#252526" if dark else "#ffffff"
+            secondary_fg = "#9D9D9D" if dark else "#666666"
+            border = "#3C3C3C" if dark else "#c8c8c8"
             
             style = ttk.Style()
             # In Dark Mode, we use 'clam' even on Windows because 'vista/xpnative' doesn't support custom colors well
@@ -1202,29 +1205,28 @@ def run_gui(initial_user=None):
                 elif SYS == "Darwin": style.theme_use("aqua")
                 else: style.theme_use("clam")
                 
-            style.configure("TFrame", background=bg)
-            style.configure("TLabel", background=bg, foreground=fg, font=("Segoe UI", 10))
-            style.configure("Secondary.TLabel", background=bg, foreground=secondary_fg, font=("Segoe UI", 9))
-            style.configure("Header.TLabel", background=bg, foreground=header_fg, font=("Segoe UI", 13, "bold"))
-            style.configure("TButton", font=("Segoe UI", 9))
-            style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg, font=("Segoe UI", 9), rowheight=28)
-            style.configure("Treeview.Heading", background="#333333" if dark else "#f0f0f0", 
-                            foreground="#ffffff" if dark else "#000000", borderwidth=1, font=("Segoe UI", 10, "bold"))
+            style.configure("TFrame", background=panel)
+            style.configure("TLabel", background=panel, foreground=fg, font=("Segoe UI", 13))
+            style.configure("Secondary.TLabel", background=panel, foreground=secondary_fg, font=("Segoe UI", 11))
+            style.configure("Header.TLabel", background=panel, foreground=header_fg, font=("Segoe UI", 13, "bold"))
+            style.configure("TButton", background=btn_bg, foreground=fg, font=("Segoe UI", 12), padding=(8, 3))
             style.map("TButton", background=[("active", btn_active)], foreground=[("active", header_fg)])
+            style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg, font=("Segoe UI", 12), rowheight=26)
+            style.configure("Treeview.Heading", background=btn_bg, foreground=fg, borderwidth=1, font=("Segoe UI", 12, "bold"), relief="flat")
+            style.map("Treeview", background=[("selected", "#264F78")], foreground=[("selected", "#ffffff")])
             
-            # Additional styles for complete dark mode
             style.configure("TNotebook", background=bg, borderwidth=0)
-            style.configure("TNotebook.Tab", background="#333" if dark else "#e1e1e1", 
-                            foreground=fg, padding=[10, 2])
-            style.map("TNotebook.Tab", background=[("selected", bg)], foreground=[("selected", header_fg)])
+            style.configure("TNotebook.Tab", background=btn_bg, foreground=fg, padding=[10, 4])
+            style.map("TNotebook.Tab", background=[("selected", panel)], foreground=[("selected", header_fg)])
             
-            style.configure("TCombobox", fieldbackground=field_bg, background=bg, foreground=fg, arrowcolor=fg)
+            style.configure("TCombobox", fieldbackground=field_bg, background=btn_bg, foreground=fg, arrowcolor=fg, bordercolor=border)
             style.map("TCombobox", fieldbackground=[("readonly", field_bg)], foreground=[("readonly", fg)])
             
-            style.configure("TEntry", fieldbackground=field_bg, foreground=fg, insertcolor=fg)
+            style.configure("TEntry", fieldbackground=field_bg, foreground=fg, insertcolor=fg, bordercolor=border)
             style.map("TEntry", fieldbackground=[("readonly", field_bg)], foreground=[("readonly", fg)])
             
-            style.configure("TSeparator", background="#444" if dark else "#ccc")
+            style.configure("TSeparator", background=border)
+            style.configure("TPanedwindow", background=bg)
             
             style.configure("TCheckbutton", background=bg, foreground=fg)
             style.map("TCheckbutton", background=[("active", bg)], foreground=[("active", fg)])
@@ -1234,18 +1236,16 @@ def run_gui(initial_user=None):
                 self.banner_lbl.configure(background=bg)
             
             if hasattr(self, "logbox"):
-                self.logbox.configure(background="#121212" if dark else "#f8f9fa", 
-                                      foreground="#a0a0a0" if dark else "#333",
+                self.logbox.configure(background=tree_bg, foreground=fg,
                                       insertbackground=fg,
-                                      highlightthickness=1, 
-                                      highlightbackground="#444" if dark else "#ccc",
+                                      highlightthickness=1,
+                                      highlightbackground=border,
                                       borderwidth=0)
             if hasattr(self, "v_det"):
-                self.v_det.configure(background="#121212" if dark else "#f8f9fa", 
-                                     foreground="#eee" if dark else "#000",
+                self.v_det.configure(background=tree_bg, foreground=fg,
                                      insertbackground=fg,
                                      highlightthickness=1,
-                                     highlightbackground="#444" if dark else "#ccc",
+                                     highlightbackground=border,
                                      borderwidth=0)
             
             # Listbox/Text widgets need manual config as they are tk not ttk
@@ -1258,56 +1258,36 @@ def run_gui(initial_user=None):
 
             # Global tag configuration for text widgets if needed
             if hasattr(self, "v_det"):
-                self.v_det.tag_configure("header", foreground=header_fg, font=("Segoe UI", 10, "bold"))
+                self.v_det.tag_configure("header", foreground=header_fg, font=("Segoe UI", 12, "bold"))
                 self.v_det.tag_configure("field", foreground=secondary_fg)
 
         # ---- construccion
         def _build(self):
-            # No hardcoded colors here, _apply_theme handles it
-            
-            # Banner
-            if (self.res / "banner-readme-v2.png").exists():
-                try:
-                    try:
-                        from PIL import Image, ImageTk
-                        img = Image.open(self.res / "banner-readme-v2.png")
-                        # Keep aspect ratio but fit width (~1100px)
-                        w, h = img.size
-                        new_w = 1100
-                        new_h = int(h * (new_w / w))
-                        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                        self.banner_img = ImageTk.PhotoImage(img)
-                    except ImportError:
-                        self.banner_img = tk.PhotoImage(file=str(self.res / "banner-readme-v2.png"))
-                    
-                    self.banner_lbl = tk.Label(self, image=self.banner_img, bd=0)
-                    self.banner_lbl.pack(fill="x", pady=(0, 5))
-                except Exception:
-                    pass
-
-            top = ttk.Frame(self, padding=(15, 10))
-            top.pack(fill="x")
-            
-            ttk.Label(top, text="NWN Installation:", style="Header.TLabel").pack(side="left", padx=(0, 10))
-            self.combo = ttk.Combobox(top, state="readonly", width=50)
-            self.combo.pack(side="left", padx=5, fill="x", expand=True)
+            # Toolbar (28px): icon + name, installation selector, actions
+            tb = ttk.Frame(self, padding=(6, 4))
+            tb.pack(fill="x")
+            try:
+                from PIL import Image, ImageTk
+                if (self.res / "pluma.ico").exists():
+                    ic = Image.open(self.res / "pluma.ico")
+                    ic.thumbnail((20, 20))
+                    self._toolbar_icon = ImageTk.PhotoImage(ic)
+                    ttk.Label(tb, image=self._toolbar_icon).pack(side="left", padx=(0, 4))
+            except Exception:
+                pass
+            ttk.Label(tb, text="NitRewritten", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 10))
+            ttk.Label(tb, text="NWN Installation:").pack(side="left", padx=(0, 4))
+            self.combo = ttk.Combobox(tb, state="readonly")
+            self.combo.pack(side="left", fill="x", expand=True, padx=4)
             self.combo.bind("<<ComboboxSelected>>", lambda e: self.set_game(self.combo.current()))
-            
-            btn_frame = ttk.Frame(top)
-            btn_frame.pack(side="left", padx=5)
             for txt, fn in (("Scan", self.detect), ("Add...", self.add_folder),
                             ("Folder", lambda: self.game and open_path(self.game.user)),
-                            ("▶ Launch Game", self.play)):
-                ttk.Button(btn_frame, text=txt, command=fn).pack(side="left", padx=2)
-            
-            self.info = ttk.Label(self, padding=(15, 5), foreground="#666", font=("Segoe UI", 9))
-            self.info.pack(fill="x")
-            
-            # Main content separator
-            ttk.Separator(self, orient="horizontal").pack(fill="x", padx=15, pady=5)
-            
+                            ("Launch Game", self.play)):
+                ttk.Button(tb, text=txt, command=fn).pack(side="left", padx=2)
+
+            # Notebook (tabs flush to content)
             nb = ttk.Notebook(self)
-            nb.pack(fill="both", expand=True, padx=15, pady=(5, 15))
+            nb.pack(fill="both", expand=True, padx=6, pady=(2, 0))
             self.nb = nb
             self.tab_mods, self.tab_cont, self.tab_vault = ttk.Frame(nb), ttk.Frame(nb), ttk.Frame(nb)
             self.tab_prof, self.tab_bak = ttk.Frame(nb), ttk.Frame(nb)
@@ -1324,6 +1304,14 @@ def run_gui(initial_user=None):
             self.logbox = tk.Text(self.tab_log, state="disabled", wrap="word")
             self.logbox.pack(fill="both", expand=True)
             nb.bind("<<NotebookTabChanged>>", self._tab_changed)
+
+            # Status bar (26px)
+            sb = ttk.Frame(self, padding=(6, 3))
+            sb.pack(fill="x", side="bottom")
+            self.status_left = ttk.Label(sb, text="", style="Secondary.TLabel")
+            self.status_left.pack(side="left")
+            self.status_right = ttk.Label(sb, text="", style="Secondary.TLabel")
+            self.status_right.pack(side="right")
 
         def _btns(self, parent, items):
             f = ttk.Frame(parent)
@@ -1413,7 +1401,7 @@ def run_gui(initial_user=None):
             ttk.Checkbutton(p, text="Lowercase file names for hak/tlk/override (Recommended for Linux)",
                             variable=self.v_lower, command=self.save_settings).pack(anchor="w", pady=8)
             
-            ttk.Label(p, text="When a file already exists during installation:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(15, 5))
+            ttk.Label(p, text="When a file already exists during installation:", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(15, 5))
             for v, t in (("ask", "Ask every time"), 
                          ("overwrite", "Overwrite (Backup will be created and restored on uninstall)"),
                          ("skip", "Skip existing files")):
@@ -1475,7 +1463,7 @@ def run_gui(initial_user=None):
             self.log(f"Installations detected: {len(self.games)}")
             if not self.games:
                 self.game = self.lib = None
-                self.info.configure(text="No installations found. Use 'Add...' to manually locate your game folder.")
+                self.status_left.configure(text="No installations found. Use 'Add...' to manually locate your game folder.")
                 self.refresh_all()
                 return
             last = self.cfg.get("last")
@@ -1504,7 +1492,7 @@ def run_gui(initial_user=None):
             self.lib = Library(self.game.user)
             self.cfg["last"] = str(self.game.root)
             save_cfg(self.cfg)
-            self.info.configure(text=f"Game data: {self.game.user}")
+            self.status_left.configure(text=f"Game data: {self.game.user}")
             want = "NWN 1" if self.game.edition == "Diamond" else "NWN:EE"
             if not self.vault_items:
                 self.v_game.set(want)
@@ -1530,6 +1518,8 @@ def run_gui(initial_user=None):
             self.refresh_content()
             self.refresh_profiles()
             self.refresh_backups()
+            if hasattr(self, "status_right") and self.lib:
+                self.status_right.configure(text=f"{len(self.lib.mods)} mods")
 
         def refresh_mods(self):
             self.tv_mods.delete(*self.tv_mods.get_children())
@@ -1715,7 +1705,7 @@ def run_gui(initial_user=None):
         def _build_vault(self):
             p = self.tab_vault
             top = ttk.Frame(p)
-            top.pack(fill="x", pady=(0, 6))
+            top.pack(fill="x", pady=(0, 4))
             self.v_game = tk.StringVar(value="NWN:EE")
             g = ttk.Combobox(top, state="readonly", width=10, values=list(VAULT_GAMES), textvariable=self.v_game)
             g.pack(side="left")
@@ -1724,34 +1714,41 @@ def run_gui(initial_user=None):
             self.v_cat.set("(All)")
             self.v_cat.pack(side="left", padx=5)
             self.v_cat.bind("<<ComboboxSelected>>", lambda e: self.vault_filter())
-            
+
             self.v_q = tk.StringVar()
             ttk.Label(top, text="Search: ", style="Secondary.TLabel").pack(side="left", padx=(5, 0))
             ttk.Entry(top, textvariable=self.v_q).pack(side="left", fill="x", expand=True, padx=5)
             self.v_q.trace_add("write", lambda *a: self.vault_filter())
             ttk.Button(top, text="Refresh", command=lambda: self.vault_load(True)).pack(side="left", padx=2)
-            self.v_lbl = ttk.Label(top, foreground="#1a73e8", font=("Segoe UI", 9, "bold"))
+            self.v_lbl = ttk.Label(top, foreground="#4DA3FF", font=("Segoe UI", 9, "bold"))
             self.v_lbl.pack(side="left", padx=10)
-            
+
+            # Paned: table (left) | detail (right, 290px min)
+            paned = ttk.PanedWindow(p, orient="horizontal")
+            paned.pack(fill="both", expand=True)
+
+            left = ttk.Frame(paned)
+            paned.add(left, weight=3)
             cols = ("name", "category", "author", "posted", "votes")
-            self.tv_vault = self._tree(p, cols, (330, 110, 130, 90, 60))
+            self.tv_vault = self._tree(left, cols, (330, 110, 130, 90, 60))
             for c in cols:
                 self.tv_vault.heading(c, text=c.title(), command=lambda c=c: self.vault_sort_by(c))
             self.tv_vault.bind("<<TreeviewSelect>>", self.vault_select)
-            det = ttk.Frame(p)
-            det.pack(fill="x", pady=(6, 0))
-            self.v_img = ttk.Label(det, width=28, anchor="center")
-            self.v_img.pack(side="left", padx=(0, 8))
-            self.v_det = tk.Text(det, height=10, wrap="word", state="disabled")
-            self.v_det.pack(side="left", fill="both", expand=True)
-            side = ttk.Frame(det)
-            side.pack(side="left", fill="y", padx=(8, 0))
-            ttk.Label(side, text="Files:").pack(anchor="w")
-            self.lb_vfiles = tk.Listbox(side, height=4, width=34, exportselection=False, font=("Segoe UI", 9))
+
+            right = ttk.Frame(paned, padding=6)
+            paned.add(right, weight=1)
+            # min width for detail
+            right.configure(width=290)
+
+            self.v_img = ttk.Label(right, anchor="center")
+            self.v_img.pack(fill="x", pady=(0, 6))
+            self.v_det = tk.Text(right, height=8, wrap="word", state="disabled")
+            self.v_det.pack(fill="both", expand=True)
+            ttk.Label(right, text="Files:").pack(anchor="w", pady=(6, 0))
+            self.lb_vfiles = tk.Listbox(right, height=4, exportselection=False, font=("Segoe UI", 9))
             self.lb_vfiles.pack(fill="x")
-            ttk.Button(side, text="⬇ Download & Install", command=self.vault_install).pack(fill="x", pady=(6, 2))
-            ttk.Button(side, text="Open Page", command=lambda: self.vault_sel and
-                       webbrowser.open(self.vault_sel["url"])).pack(fill="x")
+            ttk.Button(right, text="Download & Install", command=self.vault_install).pack(fill="x", pady=(6, 2))
+            ttk.Button(right, text="Open Page", command=lambda: self.vault_sel and webbrowser.open(self.vault_sel["url"])).pack(fill="x")
 
         def vault_load(self, force=False):
             if self.vault_busy:
