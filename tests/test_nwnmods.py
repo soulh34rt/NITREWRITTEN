@@ -309,3 +309,27 @@ def test_mod_metadata(lib, tmp_path):
     assert m["author"] == "me"
     assert m["version"] == "1.0"
     assert m["vault_url"] == "http://x"
+
+
+def test_groups(lib, tmp_path):
+    import zipfile
+    for name in ("a", "b"):
+        z = tmp_path / f"{name}.zip"
+        with zipfile.ZipFile(z, "w") as zf:
+            zf.writestr(f"hak/{name}.hak", name.encode())
+        lib.install(z, name=name)
+    lib.create_group("g1")
+    lib.add_to_group("a", "g1")
+    lib.add_to_group("b", "g1")
+    assert set(lib.group_mods("g1")) == {"a", "b"}
+    assert lib.mods["a"].get("group") == "g1"
+    # deactivate/activate
+    lib.deactivate_group("g1")
+    assert lib.mods["a"]["enabled"] is False
+    assert lib.mods["b"]["enabled"] is False
+    lib.activate_group("g1")
+    assert lib.mods["a"]["enabled"] is True
+    assert lib.mods["b"]["enabled"] is True
+    lib.delete_group("g1")
+    assert "g1" not in lib.groups()
+    assert lib.mods["a"].get("group") == ""

@@ -810,12 +810,13 @@ class Library:
         self.user = Path(user)
         self.base = self.user / ".nwnmods"
         self.mf = self.base / "manifest.json"
-        self.d = {"mods": {}, "profiles": {}, "active_save_mod": None}
+        self.d = {"mods": {}, "profiles": {}, "groups": {}, "active_save_mod": None}
         if self.mf.exists():
             try:
                 self.d.update(json.loads(self.mf.read_text(encoding="utf-8")))
             except Exception as e:  # noqa: BLE001
                 sys.stderr.write(f"nwnmods: could not read manifest {self.mf}: {e!r}\n")
+        self.d.setdefault("groups", {})
         self._migrate()
 
     @property
@@ -1092,6 +1093,7 @@ class Library:
             m.setdefault("vault_url", "")
             m.setdefault("author", "")
             m.setdefault("version", "")
+            m.setdefault("group", "")
 
 
     def requires(self, name):
@@ -1261,6 +1263,70 @@ class Library:
             if k in kwargs and kwargs[k] is not None:
                 m[k] = kwargs[k]
         self.save()
+
+
+    def groups(self):
+        return dict(self.d.get("groups", {}))
+
+    def create_group(self, name):
+        if not name:
+            raise Err("Group name required.")
+        self.d.setdefault("groups", {})
+        if name in self.d["groups"]:
+            raise Err(f"Group '{name}' already exists.")
+        self.d["groups"][name] = []
+        self.save()
+
+    def delete_group(self, name):
+        if name not in self.d.get("groups", {}):
+            raise Err(f"Group '{name}' not found.")
+        for m in self.mods.values():
+            if m.get("group") == name:
+                m["group"] = ""
+        del self.d["groups"][name]
+        self.save()
+
+    def add_to_group(self, mod, group):
+        if mod not in self.mods:
+            raise Err(f"'{mod}' not registered.")
+        if group not in self.d.get("groups", {}):
+            raise Err(f"Group '{group}' not found.")
+        # remove from previous group
+        prev = self.mods[mod].get("group")
+        if prev and prev in self.d["groups"]:
+            if mod in self.d["groups"][prev]:
+                self.d["groups"][prev].remove(mod)
+        self.mods[mod]["group"] = group
+        if mod not in self.d["groups"][group]:
+            self.d["groups"][group].append(mod)
+        self.save()
+
+    def remove_from_group(self, mod):
+        if mod not in self.mods:
+            raise Err(f"'{mod}' not registered.")
+        prev = self.mods[mod].get("group")
+        if prev and prev in self.d.get("groups", {}):
+            if mod in self.d["groups"][prev]:
+                self.d["groups"][prev].remove(mod)
+        self.mods[mod]["group"] = ""
+        self.save()
+
+    def group_mods(self, group):
+        return list(self.d.get("groups", {}).get(group, []))
+
+    def activate_group(self, group, on_conflict=None):
+        if group not in self.d.get("groups", {}):
+            raise Err(f"Group '{group}' not found.")
+        for name in self.d["groups"][group]:
+            if name in self.mods and not self.mods[name].get("enabled"):
+                self.enable(name, on_conflict)
+
+    def deactivate_group(self, group):
+        if group not in self.d.get("groups", {}):
+            raise Err(f"Group '{group}' not found.")
+        for name in self.d["groups"][group]:
+            if name in self.mods and self.mods[name].get("enabled"):
+                self.disable(name)
 
     def conflicts_report(self) -> dict:
         seen = {}

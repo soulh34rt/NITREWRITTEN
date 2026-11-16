@@ -43,6 +43,15 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    gr = sp.add_parser("group")
+    gsv = gr.add_subparsers(dest="group_cmd")
+    gsv.add_parser("list")
+    gc = gsv.add_parser("create"); gc.add_argument("name")
+    gd = gsv.add_parser("delete"); gd.add_argument("name")
+    ga = gsv.add_parser("add"); ga.add_argument("mod"); ga.add_argument("group")
+    grm = gsv.add_parser("remove"); grm.add_argument("mod")
+    gac = gsv.add_parser("activate"); gac.add_argument("name")
+    gdc = gsv.add_parser("deactivate"); gdc.add_argument("name")
     nt = sp.add_parser("note"); nt.add_argument("name"); nt.add_argument("text", nargs="+")
     rt = sp.add_parser("rate"); rt.add_argument("name"); rt.add_argument("value")
     mt = sp.add_parser("meta"); mt.add_argument("name")
@@ -128,6 +137,23 @@ def cli(argv):
             hay = f"{n} {m.get('notes','')} {m.get('author','')} {m.get('vault_url','')}".lower()
             if q in hay:
                 print(f"{'[ON]' if m.get('enabled') else '[OFF]'} {n}  (rating {m.get('rating',0)})")
+    elif a.cmd == "group":
+        gc = getattr(a, "group_cmd", None)
+        if gc == "list" or gc is None:
+            for name, mods in lib.groups().items():
+                print(f"{name}: {len(mods)} mods -> {mods}")
+        elif gc == "create":
+            lib.create_group(a.name); print(f"[OK] group created: {a.name}")
+        elif gc == "delete":
+            lib.delete_group(a.name); print(f"[OK] group deleted: {a.name}")
+        elif gc == "add":
+            lib.add_to_group(a.mod, a.group); print(f"[OK] {a.mod} -> {a.group}")
+        elif gc == "remove":
+            lib.remove_from_group(a.mod); print(f"[OK] {a.mod} removed from group")
+        elif gc == "activate":
+            lib.activate_group(a.name); print(f"[OK] activated group {a.name}")
+        elif gc == "deactivate":
+            lib.deactivate_group(a.name); print(f"[OK] deactivated group {a.name}")
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":
