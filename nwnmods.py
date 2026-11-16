@@ -407,8 +407,8 @@ def fetch_bytes(url: str, timeout=30) -> bytes:
 
 # --------------------------------------------------------------------------- Neverwinter Vault
 VAULT = "https://neverwintervault.org"
-VAULT_GAMES = {"NWN:EE": "nwnee", "NWN 1": "nwn1", "Todos": "all"}
-VAULT_TTL = 6 * 3600  # el catalogo se guarda 6 h para no pedirlo en cada clic
+VAULT_GAMES = {"NWN:EE": "nwnee", "NWN 1": "nwn1", "All": "all"}
+VAULT_TTL = 6 * 3600  # catalog is cached for 6h to avoid excessive requests
 
 
 def http_get(url: str, timeout=40) -> str:
