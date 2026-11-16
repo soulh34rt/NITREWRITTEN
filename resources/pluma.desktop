@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Pluma
+Comment=NitRewritten - Pluma
+Exec=/ruta/a/tu/programa
+Icon=pluma
+Terminal=false
+Categories=Utility;

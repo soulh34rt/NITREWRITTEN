@@ -421,7 +421,7 @@ def _norm(t: str) -> str:
 
 
 class _CatalogParser(HTMLParser):
-    """Tablas del catalogo: Captura | Nombre | Autor | Descripcion | Publicado | Actualizado | Votos."""
+    """Catalog tables: Capture | Name | Author | Description | Posted | Updated | Votes."""
 
     def __init__(self, base):
         super().__init__(convert_charrefs=True)
@@ -836,7 +836,7 @@ class Library:
         with zipfile.ZipFile(zpath) as z:
             for m in z.infolist():
                 if not _inside(self.user, m.filename):
-                    raise Err("Copia con rutas inseguras.")
+                    raise Err("Backup contains insecure paths.")
             z.extractall(self.user)
 
 
@@ -846,8 +846,27 @@ def run_gui(initial_user=None):
         def __init__(self):
             super().__init__()
             self.title("NITREWRITTEN - Professional NWN Mod Manager")
-            self.geometry("1100x750")
-            self.minsize(900, 650)
+            self.geometry("1100x850")
+            self.minsize(900, 700)
+            
+            # Load assets
+            self.res = Path(__file__).parent / "resources"
+            try:
+                if (self.res / "pluma.ico").exists():
+                    if SYS == "Windows":
+                        self.iconbitmap(str(self.res / "pluma.ico"))
+                    else:
+                        try:
+                            # Try to use a small version of the banner as icon for Linux if pluma.png is missing
+                            # Or if we have Pillow, we can extract from .ico
+                            from PIL import Image, ImageTk
+                            icon_img = Image.open(self.res / "pluma.ico")
+                            self.icon_photo = ImageTk.PhotoImage(icon_img)
+                            self.iconphoto(True, self.icon_photo)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             
             style = ttk.Style()
             # Modern dark/light hybrid theme configuration
@@ -886,33 +905,93 @@ def run_gui(initial_user=None):
             btn_active = "#333333" if dark else "#e8f0fe"
             tree_bg = "#2d2d2d" if dark else "#ffffff"
             tree_fg = "#ffffff" if dark else "#000000"
+            field_bg = "#333333" if dark else "#ffffff"
+            secondary_fg = "#888888" if dark else "#666666"
             
             style = ttk.Style()
+            # Theme reset for consistent colors
+            if SYS != "Windows":
+                style.theme_use("clam")
+                
             style.configure("TFrame", background=bg)
             style.configure("TLabel", background=bg, foreground=fg)
+            style.configure("Secondary.TLabel", background=bg, foreground=secondary_fg, font=("Segoe UI", 9))
             style.configure("Header.TLabel", background=bg, foreground=header_fg)
             style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg)
             style.configure("Treeview.Heading", background="#333333" if dark else "#f0f0f0", 
-                            foreground="#ffffff" if dark else "#000000")
+                            foreground="#ffffff" if dark else "#000000", borderwidth=1)
             style.map("TButton", background=[("active", btn_active)], foreground=[("active", header_fg)])
             
+            # Additional styles for complete dark mode
+            style.configure("TNotebook", background=bg, borderwidth=0)
+            style.configure("TNotebook.Tab", background="#333" if dark else "#e1e1e1", 
+                            foreground=fg, padding=[10, 2])
+            style.map("TNotebook.Tab", background=[("selected", bg)], foreground=[("selected", header_fg)])
+            
+            style.configure("TCombobox", fieldbackground=field_bg, background=bg, foreground=fg, arrowcolor=fg)
+            style.map("TCombobox", fieldbackground=[("readonly", field_bg)], foreground=[("readonly", fg)])
+            
+            style.configure("TEntry", fieldbackground=field_bg, foreground=fg, insertcolor=fg)
+            style.map("TEntry", fieldbackground=[("readonly", field_bg)], foreground=[("readonly", fg)])
+            
+            style.configure("TSeparator", background="#444" if dark else "#ccc")
+            
+            style.configure("TCheckbutton", background=bg, foreground=fg)
+            style.map("TCheckbutton", background=[("active", bg)], foreground=[("active", fg)])
+
             self.configure(background=bg)
+            if hasattr(self, "banner_lbl"):
+                self.banner_lbl.configure(background=bg)
+            
             if hasattr(self, "logbox"):
                 self.logbox.configure(background="#121212" if dark else "#f8f9fa", 
-                                      foreground="#a0a0a0" if dark else "#333")
+                                      foreground="#a0a0a0" if dark else "#333",
+                                      insertbackground=fg,
+                                      highlightthickness=1, 
+                                      highlightbackground="#444" if dark else "#ccc",
+                                      borderwidth=0)
             if hasattr(self, "v_det"):
                 self.v_det.configure(background="#121212" if dark else "#f8f9fa", 
-                                     foreground="#eee" if dark else "#000")
+                                     foreground="#eee" if dark else "#000",
+                                     insertbackground=fg,
+                                     highlightthickness=1,
+                                     highlightbackground="#444" if dark else "#ccc",
+                                     borderwidth=0)
+            
+            listbox_args = {"background": tree_bg, "foreground": tree_fg, 
+                            "selectbackground": header_fg, "borderwidth": 0, "highlightthickness": 1,
+                            "highlightbackground": "#444" if dark else "#ccc"}
             if hasattr(self, "lb_prof"):
-                self.lb_prof.configure(background=tree_bg, foreground=tree_fg)
+                self.lb_prof.configure(**listbox_args)
             if hasattr(self, "lb_bak"):
-                self.lb_bak.configure(background=tree_bg, foreground=tree_fg)
+                self.lb_bak.configure(**listbox_args)
             if hasattr(self, "lb_vfiles"):
-                self.lb_vfiles.configure(background=tree_bg, foreground=tree_fg)
+                self.lb_vfiles.configure(**listbox_args)
 
         # ---- construccion
         def _build(self):
-            self.configure(background="#ffffff")
+            # No hardcoded colors here, _apply_theme handles it
+            
+            # Banner
+            if (self.res / "banner-readme-v2.png").exists():
+                try:
+                    try:
+                        from PIL import Image, ImageTk
+                        img = Image.open(self.res / "banner-readme-v2.png")
+                        # Keep aspect ratio but fit width (~1100px)
+                        w, h = img.size
+                        new_w = 1100
+                        new_h = int(h * (new_w / w))
+                        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                        self.banner_img = ImageTk.PhotoImage(img)
+                    except ImportError:
+                        self.banner_img = tk.PhotoImage(file=str(self.res / "banner-readme-v2.png"))
+                    
+                    self.banner_lbl = tk.Label(self, image=self.banner_img, background="#ffffff", bd=0)
+                    self.banner_lbl.pack(fill="x", pady=(0, 5))
+                except Exception:
+                    pass
+
             top = ttk.Frame(self, padding=(15, 10))
             top.pack(fill="x")
             
@@ -982,7 +1061,7 @@ def run_gui(initial_user=None):
             
             filter_frame = ttk.Frame(p)
             filter_frame.pack(fill="x", pady=(0, 8))
-            ttk.Label(filter_frame, text="Search: ", foreground="#888").pack(side="left")
+            ttk.Label(filter_frame, text="Search: ", style="Secondary.TLabel").pack(side="left")
             self.q_mods = tk.StringVar()
             e = ttk.Entry(filter_frame, textvariable=self.q_mods)
             e.pack(side="left", fill="x", expand=True)
@@ -997,7 +1076,7 @@ def run_gui(initial_user=None):
             p = self.tab_cont
             f = ttk.Frame(p)
             f.pack(fill="x", pady=(0, 8))
-            self.cat = ttk.Combobox(f, state="readonly", values=["(all)"] + CONTENT_DIRS, width=16)
+            self.cat = ttk.Combobox(f, state="readonly", values=["(All)"] + CONTENT_DIRS, width=16)
             self.cat.current(0)
             self.cat.pack(side="left")
             self.cat.bind("<<ComboboxSelected>>", lambda e: self.refresh_content())
@@ -1009,7 +1088,7 @@ def run_gui(initial_user=None):
             
             ttk.Button(f, text="Clean Up", command=self.do_cleanup).pack(side="left", padx=2)
             
-            self.lbl_cont = ttk.Label(f, foreground="#888")
+            self.lbl_cont = ttk.Label(f, style="Secondary.TLabel")
             self.lbl_cont.pack(side="left")
             self.tv_cont = self._tree(p, ("folder", "file", "size", "mod"), (110, 520, 90, 220))
             for c in ("folder", "file", "size", "mod"):
@@ -1018,7 +1097,7 @@ def run_gui(initial_user=None):
         def _build_profiles(self):
             p = self.tab_prof
             ttk.Label(p, text="Profiles allow you to save and switch between different sets of active mods.",
-                      foreground="#666").pack(anchor="w", pady=(5, 10))
+                      style="Secondary.TLabel").pack(anchor="w", pady=(5, 10))
             self._btns(p, (("Save Current Profile...", self.prof_save), ("Apply Selected", self.prof_apply),
                            ("Delete Profile", self.prof_del)))
             self.lb_prof = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid")
@@ -1027,7 +1106,7 @@ def run_gui(initial_user=None):
         def _build_backups(self):
             p = self.tab_bak
             ttk.Label(p, text="Manage backups of your save games and characters.",
-                      foreground="#666").pack(anchor="w", pady=(5, 10))
+                      style="Secondary.TLabel").pack(anchor="w", pady=(5, 10))
             self._btns(p, (("Create New Backup", self.bak_make), ("Restore Selected", self.bak_restore),
                            ("Open Backups Folder", lambda: self.lib and open_path(self.lib.base / "backups"))))
             self.lb_bak = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid")
@@ -1052,7 +1131,7 @@ def run_gui(initial_user=None):
             
             ttk.Button(p, text="Change Game Data Folder...",
                        command=self.change_user).pack(anchor="w", pady=5)
-            ttk.Label(p, text=f"Config location: {CFG}", foreground="#888", font=("Segoe UI", 8)).pack(anchor="w", pady=5)
+            ttk.Label(p, text=f"Config location: {CFG}", style="Secondary.TLabel").pack(anchor="w", pady=5)
 
         # ---- utilidades
         def log(self, msg):
@@ -1324,13 +1403,13 @@ def run_gui(initial_user=None):
             g = ttk.Combobox(top, state="readonly", width=10, values=list(VAULT_GAMES), textvariable=self.v_game)
             g.pack(side="left")
             g.bind("<<ComboboxSelected>>", lambda e: self.vault_load())
-            self.v_cat = ttk.Combobox(top, state="readonly", width=20, values=["(all)"])
-            self.v_cat.set("(all)")
+            self.v_cat = ttk.Combobox(top, state="readonly", width=20, values=["(All)"])
+            self.v_cat.set("(All)")
             self.v_cat.pack(side="left", padx=5)
             self.v_cat.bind("<<ComboboxSelected>>", lambda e: self.vault_filter())
             
             self.v_q = tk.StringVar()
-            ttk.Label(top, text="Search: ", foreground="#888").pack(side="left", padx=(5, 0))
+            ttk.Label(top, text="Search: ", style="Secondary.TLabel").pack(side="left", padx=(5, 0))
             ttk.Entry(top, textvariable=self.v_q).pack(side="left", fill="x", expand=True, padx=5)
             self.v_q.trace_add("write", lambda *a: self.vault_filter())
             ttk.Button(top, text="Refresh", command=lambda: self.vault_load(True)).pack(side="left", padx=2)
@@ -1367,8 +1446,8 @@ def run_gui(initial_user=None):
             def ok(items):
                 self.vault_busy = False
                 self.vault_items = items
-                self.v_cat.configure(values=["(all)"] + sorted({i["cat"] for i in items if i["cat"]}))
-                self.v_cat.set("(all)")
+                self.v_cat.configure(values=["(All)"] + sorted({i["cat"] for i in items if i["cat"]}))
+                self.v_cat.set("(All)")
                 self.log(f"Vault: {len(items)} projects ({self.v_game.get()})")
                 self.vault_filter()
 
@@ -1376,7 +1455,7 @@ def run_gui(initial_user=None):
 
         def vault_sort_by(self, col):
             cur, desc = self.vault_sort
-            self.vault_sort = (col, not desc if cur == col else col in ("publicado", "votos"))
+            self.vault_sort = (col, not desc if cur == col else col in ("posted", "votes"))
             self.vault_filter()
 
         def vault_filter(self):
@@ -1385,7 +1464,7 @@ def run_gui(initial_user=None):
             k = keys.get(col, col)
             cat, q = self.v_cat.get(), self.v_q.get().lower().strip()
             rows = [i for i in self.vault_items
-                    if (cat in ("", "(all)") or i["cat"] == cat)
+                    if (cat in ("", "(All)") or i["cat"] == cat)
                     and (not q or q in f'{i["title"]} {i["author"]} {i["desc"]} {i["cat"]}'.lower())]
             rows.sort(key=lambda i: i[k].lower() if isinstance(i[k], str) else i[k], reverse=desc)
             self.vault_shown = rows[:3000]
