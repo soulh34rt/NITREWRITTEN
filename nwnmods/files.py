@@ -23,11 +23,13 @@ CONTENT_DIRS = ["hak", "tlk", "modules", "override", "nwm", "erf", "portraits", 
                 "campaigns", "saves", "localvault", "servervault"]
 
 
-def map_path(rel: Path, lowercase: bool):
+def map_path(rel: Path, lowercase: bool, ext_map=None, ignore_ext=None, ignore_names=None):
     parts = list(rel.parts)
     name = parts[-1]
     ext = Path(name).suffix.lower()
-    if (name.lower() in IGNORE_NAMES or ext in IGNORE_EXT or name.startswith("._")
+    _ignore_names = set((ignore_names if ignore_names is not None else IGNORE_NAMES))
+    _ignore_ext = set((ignore_ext if ignore_ext is not None else IGNORE_EXT))
+    if (name.lower() in _ignore_names or ext in _ignore_ext or name.startswith("._")
             or any(p.startswith("__MACOSX") for p in parts)):
         return None
     for i, p in enumerate(parts[:-1]):
@@ -36,7 +38,8 @@ def map_path(rel: Path, lowercase: bool):
             if lowercase and sub[0] in LOWER_DIRS:
                 sub = [sub[0]] + [x.lower() for x in sub[1:]]
             return Path(*sub)
-    sub = DEST.get(ext)
+    _ext_map = ext_map if ext_map is not None else DEST
+    sub = _ext_map.get(ext)
     if sub is None:
         stem = Path(name).stem.lower()
         sub = "portraits" if stem.startswith("po_") and ext in (".tga", ".dds", ".png") else "override"

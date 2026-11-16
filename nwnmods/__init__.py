@@ -7,7 +7,7 @@ from . import files as _files
 from ._common import APP, Err, MAX_ENTRIES, MAX_FILE_BYTES, MAX_NAME_LEN, MAX_TOTAL_BYTES, STEAM_APPID_EE, SYS, UA
 from .cli import cli, main, pick
 from .detection import (Game, classify, detect_all, documents_dir, ee_user_dir, launch, open_path, other_bases,
-                        safe_dirs, steam_libraries)
+                        safe_dirs, steam_libraries, steam_workshop_items)
 from .files import (CONTENT_DIRS, DEST, IGNORE_EXT, IGNORE_NAMES, KNOWN, LOWER_DIRS, _inside, _safe_filename,
                     _safe_member_name, _strip_symlinks, download, extract, fetch_bytes, map_path)
 from .gui import run_gui

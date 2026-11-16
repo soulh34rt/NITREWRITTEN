@@ -2,8 +2,8 @@ import argparse
 import sys
 
 from ._common import Err
-from .config import load_cfg
-from .detection import Game, detect_all, launch
+from .config import load_cfg, save_cfg
+from .detection import Game, detect_all, launch, steam_workshop_items
 from .gui import run_gui
 from .library import Library
 
@@ -43,6 +43,11 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    em = sp.add_parser("extmap"); ems = em.add_subparsers(dest="em_cmd")
+    ems.add_parser("show"); ems.add_parser("reset")
+    ws = sp.add_parser("workshop"); wsv = ws.add_subparsers(dest="ws_cmd")
+    wsv.add_parser("list")
+    wi = wsv.add_parser("import"); wi.add_argument("id"); wi.add_argument("--name")
     cb = sp.add_parser("convert-bik"); cb.add_argument("--all", action="store_true")
     gr = sp.add_parser("group")
     gsv = gr.add_subparsers(dest="group_cmd")
@@ -161,6 +166,27 @@ def cli(argv):
         print(f"[OK] converted {len(conv)} file(s)")
         for c in conv:
             print(f"  {c}")
+    elif a.cmd == "workshop":
+        wsc = getattr(a, "ws_cmd", None)
+        if wsc == "list" or wsc is None:
+            for it in steam_workshop_items():
+                print(f"{it['id']}  {it['title']}  {it['path']}")
+        elif wsc == "import":
+            items = [i for i in steam_workshop_items() if i["id"] == a.id]
+            if not items:
+                raise Err("Workshop item not found.")
+            n = lib.install(items[0]["path"], a.name, cfg["lowercase"])
+            print(f"[OK] imported workshop item: {n}")
+    elif a.cmd == "extmap":
+        ec = getattr(a, "em_cmd", None)
+        if ec == "reset" or ec is None:
+            cfg = load_cfg(); cfg["ext_map"] = None; cfg["ignore_ext"] = None; cfg["ignore_names"] = None
+            save_cfg(cfg); print("[OK] mappings reset to defaults")
+        else:
+            cfg = load_cfg()
+            print("ext_map:", cfg.get("ext_map"))
+            print("ignore_ext:", cfg.get("ignore_ext"))
+            print("ignore_names:", cfg.get("ignore_names"))
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":

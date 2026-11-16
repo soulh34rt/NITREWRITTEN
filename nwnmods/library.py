@@ -171,7 +171,16 @@ class Library:
             extract(archive, t)
             items = []
             for f in sorted(p for p in t.rglob("*") if p.is_file()):
-                rel = map_path(f.relative_to(t), lowercase)
+                try:
+                    from .config import load_cfg as _lc
+                except Exception:
+                    import nwnmods as _n
+                    _lc = getattr(_n, 'load_cfg', lambda: {})
+                _cfg = _lc() if callable(_lc) else {}
+                rel = map_path(f.relative_to(t), lowercase,
+                               ext_map=_cfg.get('ext_map'),
+                               ignore_ext=_cfg.get('ignore_ext'),
+                               ignore_names=_cfg.get('ignore_names'))
                 if rel:
                     items.append((f, rel))
             if not items:

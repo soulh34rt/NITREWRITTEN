@@ -70,7 +70,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -313,11 +313,13 @@ CONTENT_DIRS = ["hak", "tlk", "modules", "override", "nwm", "erf", "portraits", 
                 "campaigns", "saves", "localvault", "servervault"]
 
 
-def map_path(rel: Path, lowercase: bool):
+def map_path(rel: Path, lowercase: bool, ext_map=None, ignore_ext=None, ignore_names=None):
     parts = list(rel.parts)
     name = parts[-1]
     ext = Path(name).suffix.lower()
-    if (name.lower() in IGNORE_NAMES or ext in IGNORE_EXT or name.startswith("._")
+    _ignore_names = set((ignore_names if ignore_names is not None else IGNORE_NAMES))
+    _ignore_ext = set((ignore_ext if ignore_ext is not None else IGNORE_EXT))
+    if (name.lower() in _ignore_names or ext in _ignore_ext or name.startswith("._")
             or any(p.startswith("__MACOSX") for p in parts)):
         return None
     for i, p in enumerate(parts[:-1]):
@@ -326,7 +328,8 @@ def map_path(rel: Path, lowercase: bool):
             if lowercase and sub[0] in LOWER_DIRS:
                 sub = [sub[0]] + [x.lower() for x in sub[1:]]
             return Path(*sub)
-    sub = DEST.get(ext)
+    _ext_map = ext_map if ext_map is not None else DEST
+    sub = _ext_map.get(ext)
     if sub is None:
         stem = Path(name).stem.lower()
         sub = "portraits" if stem.startswith("po_") and ext in (".tga", ".dds", ".png") else "override"
@@ -965,7 +968,16 @@ class Library:
             extract(archive, t)
             items = []
             for f in sorted(p for p in t.rglob("*") if p.is_file()):
-                rel = map_path(f.relative_to(t), lowercase)
+                try:
+                    from .config import load_cfg as _lc
+                except Exception:
+                    import nwnmods as _n
+                    _lc = getattr(_n, 'load_cfg', lambda: {})
+                _cfg = _lc() if callable(_lc) else {}
+                rel = map_path(f.relative_to(t), lowercase,
+                               ext_map=_cfg.get('ext_map'),
+                               ignore_ext=_cfg.get('ignore_ext'),
+                               ignore_names=_cfg.get('ignore_names'))
                 if rel:
                     items.append((f, rel))
             if not items:
@@ -2499,3 +2511,36 @@ if __name__ == "__main__":
     from nwnmods.cli import main
 
     main()
+
+
+def steam_workshop_items():
+    """Return list of dicts {id, path, title} for NWN EE workshop subscriptions."""
+    out = []
+    # find steam libraries
+    for lib in steam_libraries():
+        content = lib / "steamapps" / "workshop" / "content" / STEAM_APPID_EE
+        if not content.is_dir():
+            continue
+        for d in safe_dirs(content):
+            title = d.name
+            # try to read title from workshopitem file or appworkshop acf
+            for cand in ("workshopitem", "workshop_item", "title.txt"):
+                f = d / cand
+                if f.is_file():
+                    try:
+                        txt = f.read_text(errors="ignore")
+                        m = re.search(r'"title"\s+"([^"]+)"', txt)
+                        if m:
+                            title = m.group(1)
+                    except OSError:
+                        pass
+            out.append({"id": d.name, "path": d, "title": title})
+    # dedupe by id
+    seen = set()
+    uniq = []
+    for it in out:
+        if it["id"] in seen:
+            continue
+        seen.add(it["id"])
+        uniq.append(it)
+    return uniq

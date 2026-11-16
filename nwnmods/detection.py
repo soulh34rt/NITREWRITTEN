@@ -213,3 +213,36 @@ def launch(game: Game):
     if SYS != "Windows" and exe.suffix.lower() == ".exe":
         cmd = ["wine"] + cmd
     subprocess.Popen(cmd, cwd=str(exe.parent))
+
+
+def steam_workshop_items():
+    """Return list of dicts {id, path, title} for NWN EE workshop subscriptions."""
+    out = []
+    # find steam libraries
+    for lib in steam_libraries():
+        content = lib / "steamapps" / "workshop" / "content" / STEAM_APPID_EE
+        if not content.is_dir():
+            continue
+        for d in safe_dirs(content):
+            title = d.name
+            # try to read title from workshopitem file or appworkshop acf
+            for cand in ("workshopitem", "workshop_item", "title.txt"):
+                f = d / cand
+                if f.is_file():
+                    try:
+                        txt = f.read_text(errors="ignore")
+                        m = re.search(r'"title"\s+"([^"]+)"', txt)
+                        if m:
+                            title = m.group(1)
+                    except OSError:
+                        pass
+            out.append({"id": d.name, "path": d, "title": title})
+    # dedupe by id
+    seen = set()
+    uniq = []
+    for it in out:
+        if it["id"] in seen:
+            continue
+        seen.add(it["id"])
+        uniq.append(it)
+    return uniq
