@@ -266,3 +266,29 @@ def test_dependencies_block_enable(lib, tmp_path):
     # force works
     lib.enable("child", force_deps=True)
     assert lib.mods["child"]["enabled"] is True
+
+
+def test_original_snapshot_and_restore(lib, user_dir):
+    (user_dir / "hak").mkdir(parents=True, exist_ok=True)
+    (user_dir / "hak" / "v.hak").write_bytes(b"orig")
+    d = lib.create_original_snapshot()
+    assert d.is_dir()
+    assert lib.has_original_snapshot()
+    # modify
+    (user_dir / "hak" / "v.hak").write_bytes(b"changed")
+    (user_dir / "hak" / "new.hak").write_bytes(b"new")
+    changed = lib.changed_files()
+    statuses = {c for _, c in changed}
+    assert "changed" in statuses or "new" in statuses
+    trash = lib.restore_original()
+    assert (user_dir / "hak" / "v.hak").read_bytes() == b"orig"
+    assert not (user_dir / "hak" / "new.hak").exists()
+    assert trash.is_dir()
+
+def test_adopt_files(lib, user_dir):
+    (user_dir / "hak").mkdir(parents=True, exist_ok=True)
+    (user_dir / "hak" / "x.hak").write_bytes(b"x")
+    n = lib.adopt_files("adopted", ["hak/x.hak"])
+    assert n == "adopted"
+    assert "adopted" in lib.mods
+    assert "hak/x.hak" in lib.mods["adopted"]["files"]

@@ -1130,6 +1130,116 @@ class Library:
             raise Err("'{}' is required by active mods: {}".format(name, ", ".join(active_deps)))
         return active_deps
 
+
+    def original_snapshot_dir(self):
+        return self.base / "original"
+
+    def has_original_snapshot(self):
+        return self.d.get("original_snapshot", False) and self.original_snapshot_dir().is_dir()
+
+    def create_original_snapshot(self):
+        if self.has_original_snapshot():
+            return self.original_snapshot_dir()
+        d = self.original_snapshot_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        for sub in CONTENT_DIRS:
+            src = self.user / sub
+            if src.is_dir():
+                dst = d / sub
+                if dst.exists():
+                    shutil.rmtree(dst, ignore_errors=True)
+                shutil.copytree(src, dst)
+        self.d["original_snapshot"] = True
+        self.save()
+        return d
+
+    def changed_files(self):
+        """Return list of (relpath, 'changed'|'new'|'missing') vs original snapshot."""
+        if not self.has_original_snapshot():
+            return []
+        orig = self.original_snapshot_dir()
+        res = []
+        # current files
+        current = set()
+        for sub in CONTENT_DIRS:
+            d = self.user / sub
+            if d.is_dir():
+                for f in d.rglob("*"):
+                    if f.is_file():
+                        current.add(f.relative_to(self.user).as_posix())
+        # original files
+        original = set()
+        for sub in CONTENT_DIRS:
+            d = orig / sub
+            if d.is_dir():
+                for f in d.rglob("*"):
+                    if f.is_file():
+                        original.add(f.relative_to(orig).as_posix())
+        for rel in sorted(current | original):
+            if rel in current and rel not in original:
+                res.append((rel, "new"))
+            elif rel in original and rel not in current:
+                res.append((rel, "missing"))
+            elif rel in current and rel in original:
+                # compare hash
+                import hashlib
+                def h(p):
+                    return hashlib.sha256(p.read_bytes()).hexdigest()
+                try:
+                    if h(self.user / rel) != h(orig / rel):
+                        res.append((rel, "changed"))
+                except OSError:
+                    pass
+        return res
+
+    def restore_original(self):
+        if not self.has_original_snapshot():
+            raise Err("No original snapshot available.")
+        # trash current content
+        trash = self.base / "trash" / ("restore-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
+        trash.mkdir(parents=True, exist_ok=True)
+        for sub in CONTENT_DIRS:
+            src = self.user / sub
+            if src.is_dir():
+                dst = trash / sub
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(dst))
+        # restore from snapshot
+        orig = self.original_snapshot_dir()
+        for sub in CONTENT_DIRS:
+            src = orig / sub
+            dst = self.user / sub
+            if src.is_dir():
+                shutil.copytree(src, dst)
+        # clear mods? keep registry but mark? leave as is
+        self.save()
+        return trash
+
+    def unmanaged_files(self):
+        owners = self.owners()
+        out = []
+        for sub in CONTENT_DIRS:
+            d = self.user / sub
+            if not d.is_dir():
+                continue
+            for f in d.rglob("*"):
+                if f.is_file():
+                    key = f.relative_to(self.user).as_posix()
+                    if key not in owners:
+                        out.append(key)
+        return out
+
+    def adopt_files(self, name, relpaths, lowercase=True):
+        if name in self.mods:
+            raise Err(f"'{name}' is already registered.")
+        files = [str(r).replace("\\", "/") for r in relpaths]
+        self.mods[name] = {"files": files, "stash": {}, "enabled": True,
+                           "date": datetime.now().isoformat(timespec="seconds"),
+                           "source": "adopted", "requires": [], "notes": "", "rating": 0,
+                           "vault_url": "", "author": "", "version": ""}
+        self.save()
+        return name
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():

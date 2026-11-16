@@ -36,6 +36,13 @@ def cli(argv):
     for c in ("list", "conflicts", "backup", "launch"):
         sp.add_parser(c)
     sp.add_parser("restore").add_argument("zip")
+    ad = sp.add_parser("adopt")
+    ad.add_argument("name")
+    ad.add_argument("files", nargs="+")
+    sp.add_parser("snapshot")
+    sp.add_parser("restore-original")
+    sp.add_parser("changed")
+    sp.add_parser("unmanaged")
     # saves manager
     sv = sp.add_parser("saves")
     ssv = sv.add_subparsers(dest="saves_cmd")
@@ -80,6 +87,21 @@ def cli(argv):
         print(lib.backup())
     elif a.cmd == "restore":
         lib.restore(a.zip)
+    elif a.cmd == "adopt":
+        n = lib.adopt_files(a.name, a.files)
+        print(f"[OK] adopted {n}: {len(lib.mods[n]['files'])} files")
+    elif a.cmd == "snapshot":
+        d = lib.create_original_snapshot()
+        print(f"[OK] snapshot: {d}")
+    elif a.cmd == "restore-original":
+        t = lib.restore_original()
+        print(f"[OK] restored original; previous content in {t}")
+    elif a.cmd == "changed":
+        for rel, status in lib.changed_files():
+            print(f"{status}: {rel}")
+    elif a.cmd == "unmanaged":
+        for f in lib.unmanaged_files():
+            print(f)
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":
