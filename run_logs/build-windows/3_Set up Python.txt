@@ -1,0 +1,63 @@
+﻿2026-11-16T07:01:03.5246752Z ##[group]Run actions/setup-python@v4
+2026-11-16T07:01:03.5247014Z with:
+2026-11-16T07:01:03.5247133Z   python-version: 3.10
+2026-11-16T07:01:03.5247267Z   check-latest: false
+2026-11-16T07:01:03.5248923Z   token: ***
+2026-11-16T07:01:03.5249041Z   update-environment: true
+2026-11-16T07:01:03.5249185Z   allow-prereleases: false
+2026-11-16T07:01:03.5249310Z ##[endgroup]
+2026-11-16T07:01:03.6403358Z ##[group]Installed versions
+2026-11-16T07:01:03.6524297Z Version 3.10 was not found in the local cache
+2026-11-16T07:01:03.6650637Z (node:6036) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:03.6651306Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:04.4889693Z Version 3.10 is available for downloading
+2026-11-16T07:01:04.4913556Z Download from "https://github.com/actions/python-versions/releases/download/3.10.11-11114431484/python-3.10.11-win32-x64.zip"
+2026-11-16T07:01:04.9161867Z Extract downloaded archive
+2026-11-16T07:01:04.9449815Z [command]C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command "$ErrorActionPreference = 'Stop' ; try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { } ; [System.IO.Compression.ZipFile]::ExtractToDirectory('D:\a\_temp\19b6096c-e7a4-42c6-9fa7-da9aee96d822', 'D:\a\_temp\0f65755d-1b07-4a74-a05e-74ab7487c2d8')"
+2026-11-16T07:01:07.3069616Z Execute installation script
+2026-11-16T07:01:07.7398806Z Check if Python hostedtoolcache folder exist...
+2026-11-16T07:01:07.7399239Z 
+2026-11-16T07:01:07.7464938Z Check if current Python version is installed...
+2026-11-16T07:01:07.7465787Z 
+2026-11-16T07:01:07.7580774Z No Python3.10.* found
+2026-11-16T07:01:07.7581719Z 
+2026-11-16T07:01:07.7586306Z Remove registry entries for Python 3.10(x64)...
+2026-11-16T07:01:07.7587212Z 
+2026-11-16T07:01:08.1421613Z Create Python 3.10.11 folder in C:\hostedtoolcache\windows\Python
+2026-11-16T07:01:08.1422075Z 
+2026-11-16T07:01:08.1471468Z Copy Python binaries to C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:08.1471840Z 
+2026-11-16T07:01:08.1581894Z Install Python 3.10.11 in C:\hostedtoolcache\windows\Python...
+2026-11-16T07:01:08.1582198Z 
+2026-11-16T07:01:29.3902858Z Create python3 symlink
+2026-11-16T07:01:29.3903437Z 
+2026-11-16T07:01:29.4148161Z 
+2026-11-16T07:01:29.4150085Z 
+2026-11-16T07:01:29.4153390Z Directory: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:29.4153761Z 
+2026-11-16T07:01:29.4153767Z 
+2026-11-16T07:01:29.4160886Z Mode                 LastWriteTime         Length Name
+2026-11-16T07:01:29.4163575Z ----                 -------------         ------ ----
+2026-11-16T07:01:29.4170554Z -a---l        11/16/2026   7:01 AM              0 python3.exe
+2026-11-16T07:01:29.4177531Z Install and upgrade Pip
+2026-11-16T07:01:29.4178619Z 
+2026-11-16T07:01:30.9996213Z Looking in links: c:\Users\RUNNER~1\AppData\Local\Temp\tmpkuntx2b2
+2026-11-16T07:01:30.9998680Z Requirement already satisfied: setuptools in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (65.5.0)
+2026-11-16T07:01:31.0001528Z Requirement already satisfied: pip in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (23.0.1)
+2026-11-16T07:01:31.9728580Z Collecting pip
+2026-11-16T07:01:32.0349753Z Downloading pip-26.3-py3-none-any.whl (2.0 MB)
+2026-11-16T07:01:32.1073391Z 
+2026-11-16T07:01:32.1074548Z ---------------------------------------- 2.0/2.0 MB 24.9 MB/s eta 0:00:00
+2026-11-16T07:01:32.1074993Z 
+2026-11-16T07:01:32.1332376Z Installing collected packages: pip
+2026-11-16T07:01:32.1332955Z Attempting uninstall: pip
+2026-11-16T07:01:32.1338041Z Found existing installation: pip 23.0.1
+2026-11-16T07:01:32.3295656Z Uninstalling pip-23.0.1:
+2026-11-16T07:01:32.3430418Z Successfully uninstalled pip-23.0.1
+2026-11-16T07:01:34.0463547Z Successfully installed pip-26.3
+2026-11-16T07:01:34.7063358Z Create complete file
+2026-11-16T07:01:34.7065807Z 
+2026-11-16T07:01:34.7075007Z 
+2026-11-16T07:01:34.7075226Z 
+2026-11-16T07:01:34.7305059Z Successfully set up CPython (3.10.11)
+2026-11-16T07:01:34.7305873Z ##[endgroup]

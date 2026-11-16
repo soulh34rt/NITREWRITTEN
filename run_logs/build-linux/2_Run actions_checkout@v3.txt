@@ -1,0 +1,107 @@
+﻿2026-11-16T07:01:02.7712555Z ##[group]Run actions/checkout@v3
+2026-11-16T07:01:02.7713086Z with:
+2026-11-16T07:01:02.7713395Z   repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:02.7715591Z   token: ***
+2026-11-16T07:01:02.7715879Z   ssh-strict: true
+2026-11-16T07:01:02.7716160Z   persist-credentials: true
+2026-11-16T07:01:02.7716674Z   clean: true
+2026-11-16T07:01:02.7716989Z   sparse-checkout-cone-mode: true
+2026-11-16T07:01:02.7717291Z   fetch-depth: 1
+2026-11-16T07:01:02.7717591Z   fetch-tags: false
+2026-11-16T07:01:02.7717843Z   lfs: false
+2026-11-16T07:01:02.7718097Z   submodules: false
+2026-11-16T07:01:02.7718406Z   set-safe-directory: true
+2026-11-16T07:01:02.7718721Z   allow-unsafe-pr-checkout: false
+2026-11-16T07:01:02.7719170Z ##[endgroup]
+2026-11-16T07:01:04.2797520Z (node:2260) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:04.2798579Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:04.2868697Z Syncing repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:04.2870310Z ##[group]Getting Git version info
+2026-11-16T07:01:04.2870773Z Working directory is '/home/runner/work/NITREWRITTEN/NITREWRITTEN'
+2026-11-16T07:01:04.2871429Z [command]/usr/bin/git version
+2026-11-16T07:01:04.2871755Z git version 2.56.1
+2026-11-16T07:01:04.2873601Z ##[endgroup]
+2026-11-16T07:01:04.2877592Z Temporarily overriding HOME='/home/runner/work/_temp/d4e22ca3-4456-4f7a-bf53-c73e68be5c23' before making global git config changes
+2026-11-16T07:01:04.2878443Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T07:01:04.2879937Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/NITREWRITTEN/NITREWRITTEN
+2026-11-16T07:01:04.2949009Z Deleting the contents of '/home/runner/work/NITREWRITTEN/NITREWRITTEN'
+2026-11-16T07:01:04.2951175Z ##[group]Initializing the repository
+2026-11-16T07:01:04.2953569Z [command]/usr/bin/git init /home/runner/work/NITREWRITTEN/NITREWRITTEN
+2026-11-16T07:01:04.3329250Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T07:01:04.3329856Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T07:01:04.3330326Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T07:01:04.3330722Z hint: call:
+2026-11-16T07:01:04.3331000Z hint:
+2026-11-16T07:01:04.3331321Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T07:01:04.3331654Z hint:
+2026-11-16T07:01:04.3332002Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T07:01:04.3332496Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T07:01:04.3332898Z hint:
+2026-11-16T07:01:04.3333155Z hint: 	git branch -m <name>
+2026-11-16T07:01:04.3333457Z hint:
+2026-11-16T07:01:04.3333957Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T07:01:04.3350141Z Initialized empty Git repository in /home/runner/work/NITREWRITTEN/NITREWRITTEN/.git/
+2026-11-16T07:01:04.3355703Z [command]/usr/bin/git remote add origin https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:04.3405098Z ##[endgroup]
+2026-11-16T07:01:04.3405690Z ##[group]Disabling automatic garbage collection
+2026-11-16T07:01:04.3406753Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T07:01:04.3425458Z ##[endgroup]
+2026-11-16T07:01:04.3426500Z ##[group]Setting up auth
+2026-11-16T07:01:04.3429156Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T07:01:04.3448753Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T07:01:04.5966541Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T07:01:04.5984913Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T07:01:04.6152322Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T07:01:04.6173715Z ##[endgroup]
+2026-11-16T07:01:04.6174226Z ##[group]Fetching the repository
+2026-11-16T07:01:04.6181839Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +5bad4367ce47e6e312a7a174337efab09b9ba005:refs/tags/1.0
+2026-11-16T07:01:05.1035582Z remote: Enumerating objects: 11, done.        
+2026-11-16T07:01:05.1036038Z remote: Counting objects:   9% (1/11)        
+2026-11-16T07:01:05.1036679Z remote: Counting objects:  18% (2/11)        
+2026-11-16T07:01:05.1037123Z remote: Counting objects:  27% (3/11)        
+2026-11-16T07:01:05.1037483Z remote: Counting objects:  36% (4/11)        
+2026-11-16T07:01:05.1037762Z remote: Counting objects:  45% (5/11)        
+2026-11-16T07:01:05.1038043Z remote: Counting objects:  54% (6/11)        
+2026-11-16T07:01:05.1038389Z remote: Counting objects:  63% (7/11)        
+2026-11-16T07:01:05.1038663Z remote: Counting objects:  72% (8/11)        
+2026-11-16T07:01:05.1038953Z remote: Counting objects:  81% (9/11)        
+2026-11-16T07:01:05.1039290Z remote: Counting objects:  90% (10/11)        
+2026-11-16T07:01:05.1039567Z remote: Counting objects: 100% (11/11)        
+2026-11-16T07:01:05.1039885Z remote: Counting objects: 100% (11/11), done.        
+2026-11-16T07:01:05.1040193Z remote: Compressing objects:  14% (1/7)        
+2026-11-16T07:01:05.1040505Z remote: Compressing objects:  28% (2/7)        
+2026-11-16T07:01:05.1040832Z remote: Compressing objects:  42% (3/7)        
+2026-11-16T07:01:05.1041120Z remote: Compressing objects:  57% (4/7)        
+2026-11-16T07:01:05.1041471Z remote: Compressing objects:  71% (5/7)        
+2026-11-16T07:01:05.1042064Z remote: Compressing objects:  85% (6/7)        
+2026-11-16T07:01:05.1042374Z remote: Compressing objects: 100% (7/7)        
+2026-11-16T07:01:05.1042709Z remote: Compressing objects: 100% (7/7), done.        
+2026-11-16T07:01:05.1160328Z remote: Total 11 (delta 0), reused 8 (delta 0), pack-reused 0 (from 0)        
+2026-11-16T07:01:05.1292191Z From https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:05.1292617Z  * [new ref]         5bad4367ce47e6e312a7a174337efab09b9ba005 -> 1.0
+2026-11-16T07:01:05.1296486Z ##[endgroup]
+2026-11-16T07:01:05.1296936Z ##[group]Determining the checkout info
+2026-11-16T07:01:05.1298252Z ##[endgroup]
+2026-11-16T07:01:05.1298859Z ##[group]Checking out the ref
+2026-11-16T07:01:05.1317315Z [command]/usr/bin/git checkout --progress --force refs/tags/1.0
+2026-11-16T07:01:05.1367706Z Note: switching to 'refs/tags/1.0'.
+2026-11-16T07:01:05.1368135Z 
+2026-11-16T07:01:05.1368393Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T07:01:05.1369048Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T07:01:05.1369746Z state without impacting any branches by switching back to a branch.
+2026-11-16T07:01:05.1370065Z 
+2026-11-16T07:01:05.1370325Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T07:01:05.1370849Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T07:01:05.1371160Z 
+2026-11-16T07:01:05.1371299Z   git switch -c <new-branch-name>
+2026-11-16T07:01:05.1371535Z 
+2026-11-16T07:01:05.1371667Z Or undo this operation with:
+2026-11-16T07:01:05.1371925Z 
+2026-11-16T07:01:05.1372077Z   git switch -
+2026-11-16T07:01:05.1372228Z 
+2026-11-16T07:01:05.1372539Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T07:01:05.1372855Z 
+2026-11-16T07:01:05.1373119Z HEAD is now at 5bad436 Fix release.yml dependencies again
+2026-11-16T07:01:05.1379493Z ##[endgroup]
+2026-11-16T07:01:05.1417491Z [command]/usr/bin/git log -1 --format='%H'
+2026-11-16T07:01:05.1432671Z '5bad4367ce47e6e312a7a174337efab09b9ba005'

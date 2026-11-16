@@ -1,0 +1,35 @@
+﻿2026-11-16T07:01:05.1654723Z ##[group]Run actions/setup-python@v4
+2026-11-16T07:01:05.1655033Z with:
+2026-11-16T07:01:05.1655262Z   python-version: 3.10
+2026-11-16T07:01:05.1655506Z   check-latest: false
+2026-11-16T07:01:05.1657856Z   token: ***
+2026-11-16T07:01:05.1658112Z   update-environment: true
+2026-11-16T07:01:05.1658405Z   allow-prereleases: false
+2026-11-16T07:01:05.1658731Z ##[endgroup]
+2026-11-16T07:01:05.2676132Z ##[group]Installed versions
+2026-11-16T07:01:05.5154771Z Version 3.10 was not found in the local cache
+2026-11-16T07:01:05.5302387Z (node:2343) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:05.5303327Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:06.2035615Z Version 3.10 is available for downloading
+2026-11-16T07:01:06.2036960Z Download from "https://github.com/actions/python-versions/releases/download/3.10.22-36876129702/python-3.10.22-linux-26.04-x64.tar.gz"
+2026-11-16T07:01:06.7106413Z Extract downloaded archive
+2026-11-16T07:01:06.7223098Z [command]/usr/bin/tar xz --warning=no-unknown-keyword -C /home/runner/work/_temp/dc273f44-ef0a-4ed8-8184-eff2dcee301b -f /home/runner/work/_temp/5d83c807-971e-4341-88e6-4df31aa8c4da
+2026-11-16T07:01:07.4481011Z Execute installation script
+2026-11-16T07:01:07.4580846Z Check if Python hostedtoolcache folder exist...
+2026-11-16T07:01:07.4581589Z Create Python 3.10.22 folder
+2026-11-16T07:01:07.4598824Z Copy Python binaries to hostedtoolcache folder
+2026-11-16T07:01:07.6368278Z Create additional symlinks (Required for the UsePythonVersion Azure Pipelines task and the setup-python GitHub Action)
+2026-11-16T07:01:07.6440247Z Upgrading pip...
+2026-11-16T07:01:09.2490562Z Collecting pip
+2026-11-16T07:01:09.2790184Z Downloading pip-26.3-py3-none-any.whl (2.0 MB)
+2026-11-16T07:01:09.3248134Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 45.1 MB/s eta 0:00:00
+2026-11-16T07:01:09.3249119Z 
+2026-11-16T07:01:09.3629811Z Installing collected packages: pip
+2026-11-16T07:01:09.3630431Z Attempting uninstall: pip
+2026-11-16T07:01:09.3635635Z Found existing installation: pip 23.0.1
+2026-11-16T07:01:09.4450320Z Uninstalling pip-23.0.1:
+2026-11-16T07:01:09.4492071Z Successfully uninstalled pip-23.0.1
+2026-11-16T07:01:09.9644774Z Successfully installed pip-26.3
+2026-11-16T07:01:10.0188586Z Create complete file
+2026-11-16T07:01:10.0233450Z Successfully set up CPython (3.10.22)
+2026-11-16T07:01:10.0234241Z ##[endgroup]

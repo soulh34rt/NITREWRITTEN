@@ -1,0 +1,366 @@
+﻿2026-11-16T07:00:59.0952290Z Current runner version: '2.338.2'
+2026-11-16T07:00:59.0970517Z ##[group]Runner Image Provisioner
+2026-11-16T07:00:59.0971031Z Hosted Compute Agent
+2026-11-16T07:00:59.0971372Z Version: 20261103.629
+2026-11-16T07:00:59.0971725Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T07:00:59.0972116Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T07:00:59.0972520Z Worker ID: {f2f8fd4b-29aa-488d-87bc-711a95492d13}
+2026-11-16T07:00:59.0972934Z Region: centralus
+2026-11-16T07:00:59.0973251Z Cloud: Azure
+2026-11-16T07:00:59.0973582Z ##[endgroup]
+2026-11-16T07:00:59.0974291Z ##[group]Operating System
+2026-11-16T07:00:59.0974673Z Microsoft Windows Server 2025
+2026-11-16T07:00:59.0975055Z 10.0.26100
+2026-11-16T07:00:59.0975349Z Datacenter
+2026-11-16T07:00:59.0975633Z ##[endgroup]
+2026-11-16T07:00:59.0975947Z ##[group]Runner Image
+2026-11-16T07:00:59.0976284Z Image: windows-2025-vs2026
+2026-11-16T07:00:59.0976614Z Version: 20261103.298.1
+2026-11-16T07:00:59.0977489Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20261103.298/images/windows/Windows2025-VS2026-Readme.md
+2026-11-16T07:00:59.0978359Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20261103.298
+2026-11-16T07:00:59.0978926Z ##[endgroup]
+2026-11-16T07:00:59.0979839Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T07:00:59.0981003Z Contents: read
+2026-11-16T07:00:59.0981306Z Metadata: read
+2026-11-16T07:00:59.0981605Z Packages: read
+2026-11-16T07:00:59.0981910Z ##[endgroup]
+2026-11-16T07:00:59.0983182Z Secret source: Actions
+2026-11-16T07:00:59.0983819Z Cache mode: write
+2026-11-16T07:00:59.0984203Z Prepare workflow directory
+2026-11-16T07:00:59.1211635Z Prepare all required actions
+2026-11-16T07:00:59.1256608Z Getting action download info
+2026-11-16T07:00:59.3837508Z Download action repository 'actions/checkout@v3' (SHA:a37ce9120846195fa4ece8f58b268e6043cb2f26)
+2026-11-16T07:00:59.4616669Z Download action repository 'actions/setup-python@v4' (SHA:7f4fc3e22c37d6ff65e88745f38bd3157c663f7c)
+2026-11-16T07:00:59.5543587Z Download action repository 'softprops/action-gh-release@v1' (SHA:de2c0eb89ae2a093876385947365aca7b0e5f844)
+2026-11-16T07:00:59.9242883Z Complete job name: build-windows
+2026-11-16T07:01:00.0321025Z ##[group]Run actions/checkout@v3
+2026-11-16T07:01:00.0321688Z with:
+2026-11-16T07:01:00.0321914Z   repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.0324251Z   token: ***
+2026-11-16T07:01:00.0324462Z   ssh-strict: true
+2026-11-16T07:01:00.0324880Z   persist-credentials: true
+2026-11-16T07:01:00.0325124Z   clean: true
+2026-11-16T07:01:00.0325355Z   sparse-checkout-cone-mode: true
+2026-11-16T07:01:00.0325622Z   fetch-depth: 1
+2026-11-16T07:01:00.0325841Z   fetch-tags: false
+2026-11-16T07:01:00.0326054Z   lfs: false
+2026-11-16T07:01:00.0326260Z   submodules: false
+2026-11-16T07:01:00.0326484Z   set-safe-directory: true
+2026-11-16T07:01:00.0326745Z   allow-unsafe-pr-checkout: false
+2026-11-16T07:01:00.0327098Z ##[endgroup]
+2026-11-16T07:01:00.1175708Z (node:9568) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:00.1176639Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:00.1231682Z Syncing repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.1232680Z ##[group]Getting Git version info
+2026-11-16T07:01:00.1233013Z Working directory is 'D:\a\NITREWRITTEN\NITREWRITTEN'
+2026-11-16T07:01:00.1710521Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T07:01:00.4693887Z git version 2.56.0.windows.4
+2026-11-16T07:01:00.4728174Z ##[endgroup]
+2026-11-16T07:01:00.4741232Z Temporarily overriding HOME='D:\a\_temp\835bde05-4b82-425e-bdaf-b6b392ae2c5c' before making global git config changes
+2026-11-16T07:01:00.4741927Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T07:01:00.4746632Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:00.5237547Z Deleting the contents of 'D:\a\NITREWRITTEN\NITREWRITTEN'
+2026-11-16T07:01:00.5242151Z ##[group]Initializing the repository
+2026-11-16T07:01:00.5246891Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:00.5864672Z Initialized empty Git repository in D:/a/NITREWRITTEN/NITREWRITTEN/.git/
+2026-11-16T07:01:00.5892432Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.6458801Z ##[endgroup]
+2026-11-16T07:01:00.6459621Z ##[group]Disabling automatic garbage collection
+2026-11-16T07:01:00.6465032Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-11-16T07:01:00.6758554Z ##[endgroup]
+2026-11-16T07:01:00.6759401Z ##[group]Setting up auth
+2026-11-16T07:01:00.6765804Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T07:01:00.7028654Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T07:01:01.9531062Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T07:01:01.9924704Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T07:01:02.4004097Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-11-16T07:01:02.4263717Z ##[endgroup]
+2026-11-16T07:01:02.4264130Z ##[group]Fetching the repository
+2026-11-16T07:01:02.4271129Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +5bad4367ce47e6e312a7a174337efab09b9ba005:refs/tags/1.0
+2026-11-16T07:01:03.2496463Z remote: Enumerating objects: 11, done.        
+2026-11-16T07:01:03.2501293Z remote: Counting objects:   9% (1/11)        
+2026-11-16T07:01:03.2501995Z remote: Counting objects:  18% (2/11)        
+2026-11-16T07:01:03.2502473Z remote: Counting objects:  27% (3/11)        
+2026-11-16T07:01:03.2503014Z remote: Counting objects:  36% (4/11)        
+2026-11-16T07:01:03.2503474Z remote: Counting objects:  45% (5/11)        
+2026-11-16T07:01:03.2503770Z remote: Counting objects:  54% (6/11)        
+2026-11-16T07:01:03.2504105Z remote: Counting objects:  63% (7/11)        
+2026-11-16T07:01:03.2504456Z remote: Counting objects:  72% (8/11)        
+2026-11-16T07:01:03.2504754Z remote: Counting objects:  81% (9/11)        
+2026-11-16T07:01:03.2505045Z remote: Counting objects:  90% (10/11)        
+2026-11-16T07:01:03.2505589Z remote: Counting objects: 100% (11/11)        
+2026-11-16T07:01:03.2506236Z remote: Counting objects: 100% (11/11), done.        
+2026-11-16T07:01:03.2506622Z remote: Compressing objects:  14% (1/7)        
+2026-11-16T07:01:03.2506961Z remote: Compressing objects:  28% (2/7)        
+2026-11-16T07:01:03.2507309Z remote: Compressing objects:  42% (3/7)        
+2026-11-16T07:01:03.2507688Z remote: Compressing objects:  57% (4/7)        
+2026-11-16T07:01:03.2508074Z remote: Compressing objects:  71% (5/7)        
+2026-11-16T07:01:03.2508384Z remote: Compressing objects:  85% (6/7)        
+2026-11-16T07:01:03.2508704Z remote: Compressing objects: 100% (7/7)        
+2026-11-16T07:01:03.2509020Z remote: Compressing objects: 100% (7/7), done.        
+2026-11-16T07:01:03.2678350Z remote: Total 11 (delta 0), reused 8 (delta 0), pack-reused 0 (from 0)        
+2026-11-16T07:01:03.3654950Z From https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:03.3656122Z  * [new ref]         5bad4367ce47e6e312a7a174337efab09b9ba005 -> 1.0
+2026-11-16T07:01:03.3686436Z ##[endgroup]
+2026-11-16T07:01:03.3687705Z ##[group]Determining the checkout info
+2026-11-16T07:01:03.3688647Z ##[endgroup]
+2026-11-16T07:01:03.3688922Z ##[group]Checking out the ref
+2026-11-16T07:01:03.3696337Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/tags/1.0
+2026-11-16T07:01:03.4178398Z Note: switching to 'refs/tags/1.0'.
+2026-11-16T07:01:03.4178694Z 
+2026-11-16T07:01:03.4178910Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T07:01:03.4179354Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T07:01:03.4179669Z state without impacting any branches by switching back to a branch.
+2026-11-16T07:01:03.4179885Z 
+2026-11-16T07:01:03.4180104Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T07:01:03.4180639Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T07:01:03.4180926Z 
+2026-11-16T07:01:03.4181017Z   git switch -c <new-branch-name>
+2026-11-16T07:01:03.4181250Z 
+2026-11-16T07:01:03.4181338Z Or undo this operation with:
+2026-11-16T07:01:03.4181486Z 
+2026-11-16T07:01:03.4181560Z   git switch -
+2026-11-16T07:01:03.4181697Z 
+2026-11-16T07:01:03.4182118Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T07:01:03.4182386Z 
+2026-11-16T07:01:03.4182575Z HEAD is now at 5bad436 Fix release.yml dependencies again
+2026-11-16T07:01:03.4315977Z ##[endgroup]
+2026-11-16T07:01:03.4671538Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format='%H'
+2026-11-16T07:01:03.4913485Z '5bad4367ce47e6e312a7a174337efab09b9ba005'
+2026-11-16T07:01:03.5246779Z ##[group]Run actions/setup-python@v4
+2026-11-16T07:01:03.5247017Z with:
+2026-11-16T07:01:03.5247136Z   python-version: 3.10
+2026-11-16T07:01:03.5247270Z   check-latest: false
+2026-11-16T07:01:03.5248925Z   token: ***
+2026-11-16T07:01:03.5249043Z   update-environment: true
+2026-11-16T07:01:03.5249187Z   allow-prereleases: false
+2026-11-16T07:01:03.5249312Z ##[endgroup]
+2026-11-16T07:01:03.6403392Z ##[group]Installed versions
+2026-11-16T07:01:03.6524324Z Version 3.10 was not found in the local cache
+2026-11-16T07:01:03.6650680Z (node:6036) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:03.6651311Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:04.4889746Z Version 3.10 is available for downloading
+2026-11-16T07:01:04.4913687Z Download from "https://github.com/actions/python-versions/releases/download/3.10.11-11114431484/python-3.10.11-win32-x64.zip"
+2026-11-16T07:01:04.9161916Z Extract downloaded archive
+2026-11-16T07:01:04.9449869Z [command]C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command "$ErrorActionPreference = 'Stop' ; try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { } ; [System.IO.Compression.ZipFile]::ExtractToDirectory('D:\a\_temp\19b6096c-e7a4-42c6-9fa7-da9aee96d822', 'D:\a\_temp\0f65755d-1b07-4a74-a05e-74ab7487c2d8')"
+2026-11-16T07:01:07.3069661Z Execute installation script
+2026-11-16T07:01:07.7398854Z Check if Python hostedtoolcache folder exist...
+2026-11-16T07:01:07.7399246Z 
+2026-11-16T07:01:07.7464946Z Check if current Python version is installed...
+2026-11-16T07:01:07.7465793Z 
+2026-11-16T07:01:07.7580780Z No Python3.10.* found
+2026-11-16T07:01:07.7581723Z 
+2026-11-16T07:01:07.7586318Z Remove registry entries for Python 3.10(x64)...
+2026-11-16T07:01:07.7587220Z 
+2026-11-16T07:01:08.1421744Z Create Python 3.10.11 folder in C:\hostedtoolcache\windows\Python
+2026-11-16T07:01:08.1422081Z 
+2026-11-16T07:01:08.1471495Z Copy Python binaries to C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:08.1471856Z 
+2026-11-16T07:01:08.1581913Z Install Python 3.10.11 in C:\hostedtoolcache\windows\Python...
+2026-11-16T07:01:08.1582204Z 
+2026-11-16T07:01:29.3902913Z Create python3 symlink
+2026-11-16T07:01:29.3903444Z 
+2026-11-16T07:01:29.4148221Z 
+2026-11-16T07:01:29.4150100Z 
+2026-11-16T07:01:29.4153401Z Directory: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:29.4153764Z 
+2026-11-16T07:01:29.4153768Z 
+2026-11-16T07:01:29.4160890Z Mode                 LastWriteTime         Length Name
+2026-11-16T07:01:29.4163589Z ----                 -------------         ------ ----
+2026-11-16T07:01:29.4170559Z -a---l        11/16/2026   7:01 AM              0 python3.exe
+2026-11-16T07:01:29.4177541Z Install and upgrade Pip
+2026-11-16T07:01:29.4178629Z 
+2026-11-16T07:01:30.9996437Z Looking in links: c:\Users\RUNNER~1\AppData\Local\Temp\tmpkuntx2b2
+2026-11-16T07:01:30.9998698Z Requirement already satisfied: setuptools in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (65.5.0)
+2026-11-16T07:01:31.0001547Z Requirement already satisfied: pip in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (23.0.1)
+2026-11-16T07:01:31.9728629Z Collecting pip
+2026-11-16T07:01:32.0349782Z Downloading pip-26.3-py3-none-any.whl (2.0 MB)
+2026-11-16T07:01:32.1073440Z 
+2026-11-16T07:01:32.1074555Z ---------------------------------------- 2.0/2.0 MB 24.9 MB/s eta 0:00:00
+2026-11-16T07:01:32.1074996Z 
+2026-11-16T07:01:32.1332392Z Installing collected packages: pip
+2026-11-16T07:01:32.1332958Z Attempting uninstall: pip
+2026-11-16T07:01:32.1338045Z Found existing installation: pip 23.0.1
+2026-11-16T07:01:32.3295703Z Uninstalling pip-23.0.1:
+2026-11-16T07:01:32.3430431Z Successfully uninstalled pip-23.0.1
+2026-11-16T07:01:34.0463593Z Successfully installed pip-26.3
+2026-11-16T07:01:34.7065566Z Create complete file
+2026-11-16T07:01:34.7065814Z 
+2026-11-16T07:01:34.7075018Z 
+2026-11-16T07:01:34.7075229Z 
+2026-11-16T07:01:34.7305089Z Successfully set up CPython (3.10.11)
+2026-11-16T07:01:34.7305876Z ##[endgroup]
+2026-11-16T07:01:34.7537563Z ##[group]Run python -m pip install --upgrade pip
+2026-11-16T07:01:34.7537861Z [36;1mpython -m pip install --upgrade pip[0m
+2026-11-16T07:01:34.7538065Z [36;1mpip install -r requirements.txt[0m
+2026-11-16T07:01:34.7538220Z [36;1mpip install pyinstaller[0m
+2026-11-16T07:01:34.7806291Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T07:01:34.7806498Z env:
+2026-11-16T07:01:34.7806654Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7806925Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:34.7807177Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807408Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807630Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807805Z ##[endgroup]
+2026-11-16T07:01:35.7642981Z Requirement already satisfied: pip in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (26.3)
+2026-11-16T07:01:36.9712483Z Collecting Pillow>=10.0.0 (from -r requirements.txt (line 1))
+2026-11-16T07:01:37.0288079Z   Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl.metadata (9.3 kB)
+2026-11-16T07:01:37.1018745Z Collecting pyinstaller>=6.0.0 (from -r requirements.txt (line 2))
+2026-11-16T07:01:37.1158592Z   Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl.metadata (8.5 kB)
+2026-11-16T07:01:37.1731878Z Collecting altgraph (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.1868278Z   Downloading altgraph-0.17.5-py2.py3-none-any.whl.metadata (7.5 kB)
+2026-11-16T07:01:37.2629020Z Collecting packaging>=22.0 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.2795535Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+2026-11-16T07:01:37.3336931Z Collecting pefile>=2022.5.30 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.3477268Z   Downloading pefile-2024.8.26-py3-none-any.whl.metadata (1.4 kB)
+2026-11-16T07:01:37.4062758Z Collecting pyinstaller-hooks-contrib>=2026.7 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.4199937Z   Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl.metadata (16 kB)
+2026-11-16T07:01:37.4716351Z Collecting pywin32-ctypes>=0.2.1 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.4854203Z   Downloading pywin32_ctypes-0.2.3-py3-none-any.whl.metadata (3.9 kB)
+2026-11-16T07:01:37.5020512Z Requirement already satisfied: setuptools>=42.0.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller>=6.0.0->-r requirements.txt (line 2)) (65.5.0)
+2026-11-16T07:01:37.5203113Z Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl (7.2 MB)
+2026-11-16T07:01:37.6625108Z    ---------------------------------------- 7.2/7.2 MB 63.3 MB/s  0:00:00
+2026-11-16T07:01:37.6787456Z Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl (1.5 MB)
+2026-11-16T07:01:37.7086396Z    ---------------------------------------- 1.5/1.5 MB 38.5 MB/s  0:00:00
+2026-11-16T07:01:37.7222430Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+2026-11-16T07:01:37.7522543Z Downloading pefile-2024.8.26-py3-none-any.whl (74 kB)
+2026-11-16T07:01:37.7841263Z Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl (463 kB)
+2026-11-16T07:01:37.8185491Z Downloading pywin32_ctypes-0.2.3-py3-none-any.whl (30 kB)
+2026-11-16T07:01:37.8487180Z Downloading altgraph-0.17.5-py2.py3-none-any.whl (21 kB)
+2026-11-16T07:01:37.9295280Z Installing collected packages: altgraph, pywin32-ctypes, Pillow, pefile, packaging, pyinstaller-hooks-contrib, pyinstaller
+2026-11-16T07:01:41.0810606Z 
+2026-11-16T07:01:41.0832639Z Successfully installed Pillow-12.3.0 altgraph-0.17.5 packaging-26.3 pefile-2024.8.26 pyinstaller-6.22.3 pyinstaller-hooks-contrib-2026.10 pywin32-ctypes-0.2.3
+2026-11-16T07:01:41.9093413Z Requirement already satisfied: pyinstaller in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (6.22.3)
+2026-11-16T07:01:41.9107456Z Requirement already satisfied: altgraph in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (0.17.5)
+2026-11-16T07:01:41.9111157Z Requirement already satisfied: packaging>=22.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (26.3)
+2026-11-16T07:01:41.9114811Z Requirement already satisfied: pefile>=2022.5.30 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (2024.8.26)
+2026-11-16T07:01:41.9117660Z Requirement already satisfied: pyinstaller-hooks-contrib>=2026.7 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (2026.10)
+2026-11-16T07:01:41.9120546Z Requirement already satisfied: pywin32-ctypes>=0.2.1 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (0.2.3)
+2026-11-16T07:01:41.9122803Z Requirement already satisfied: setuptools>=42.0.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (65.5.0)
+2026-11-16T07:01:42.0832666Z ##[group]Run pyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py
+2026-11-16T07:01:42.0833056Z [36;1mpyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py[0m
+2026-11-16T07:01:42.0883156Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T07:01:42.0883356Z env:
+2026-11-16T07:01:42.0883521Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0883786Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:42.0884061Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884314Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884553Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884741Z ##[endgroup]
+2026-11-16T07:01:42.4314977Z 81 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.10
+2026-11-16T07:01:42.4315216Z 81 INFO: Python: 3.10.11
+2026-11-16T07:01:42.4371681Z 87 INFO: Platform: Windows-10-10.0.26100-SP0
+2026-11-16T07:01:42.4372055Z 87 INFO: Python environment: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.4375338Z 87 INFO: wrote D:\a\NITREWRITTEN\NITREWRITTEN\NITREWRITTEN.spec
+2026-11-16T07:01:42.4441466Z 93 INFO: Module search paths (PYTHONPATH):
+2026-11-16T07:01:42.4441780Z ['C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\Scripts\\pyinstaller.exe',
+2026-11-16T07:01:42.4442055Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\python310.zip',
+2026-11-16T07:01:42.4442296Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\DLLs',
+2026-11-16T07:01:42.4442507Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib',
+2026-11-16T07:01:42.4442711Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64',
+2026-11-16T07:01:42.4443010Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages',
+2026-11-16T07:01:42.4443225Z  'D:\\a\\NITREWRITTEN\\NITREWRITTEN']
+2026-11-16T07:01:42.5653738Z 215 INFO: checking Analysis
+2026-11-16T07:01:42.5654303Z 215 INFO: Building Analysis because Analysis-00.toc is non existent
+2026-11-16T07:01:42.5654739Z 215 INFO: Looking for Python shared library...
+2026-11-16T07:01:42.5655168Z 215 INFO: Using Python shared library: C:\hostedtoolcache\windows\Python\3.10.11\x64\python310.dll
+2026-11-16T07:01:42.5655619Z 215 INFO: Running Analysis Analysis-00.toc
+2026-11-16T07:01:42.5655877Z 215 INFO: Target bytecode optimization level: 0
+2026-11-16T07:01:42.5656150Z 215 INFO: Initializing module dependency graph...
+2026-11-16T07:01:42.5671853Z 217 INFO: Initializing module graph hook caches...
+2026-11-16T07:01:42.5779258Z 228 INFO: Analyzing modules for base_library.zip ...
+2026-11-16T07:01:42.8791640Z 529 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:42.9139211Z 564 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:43.1932285Z 843 INFO: Processing standard module hook 'hook-math.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:43.6111482Z 1261 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.1970967Z 1847 INFO: Caching module dependency graph...
+2026-11-16T07:01:44.2210748Z 1871 INFO: Analyzing D:\a\NITREWRITTEN\NITREWRITTEN\nwnmods.py
+2026-11-16T07:01:44.3168389Z 1967 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.3258056Z 1976 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+2026-11-16T07:01:44.3265091Z 1977 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+2026-11-16T07:01:44.5244018Z 2175 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.6844816Z 2334 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.6975822Z 2347 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.7391270Z 2388 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9223862Z 2572 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9299046Z 2580 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9983687Z 2648 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.1112704Z 2761 INFO: Processing module hooks (post-graph stage)...
+2026-11-16T07:01:45.2319312Z 2882 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.2638918Z 2913 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.2714260Z 2922 INFO: Performing binary vs. data reclassification (923 entries)
+2026-11-16T07:01:45.3025648Z 2952 INFO: Looking for ctypes DLLs
+2026-11-16T07:01:45.3037918Z 2954 INFO: Analyzing run-time hooks ...
+2026-11-16T07:01:45.3049334Z 2955 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+2026-11-16T07:01:45.3062487Z 2956 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+2026-11-16T07:01:45.3229196Z 2972 INFO: Creating base_library.zip...
+2026-11-16T07:01:45.3327773Z 2983 INFO: Looking for dynamic libraries
+2026-11-16T07:01:45.4123396Z 3062 INFO: Extra DLL search directories (AddDllDirectory): []
+2026-11-16T07:01:45.4123691Z 3062 INFO: Extra DLL search directories (PATH): []
+2026-11-16T07:01:45.8168039Z 3466 INFO: Warnings written to D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\warn-NITREWRITTEN.txt
+2026-11-16T07:01:45.8364715Z 3485 INFO: Graph cross-reference written to D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\xref-NITREWRITTEN.html
+2026-11-16T07:01:45.8583945Z 3509 INFO: checking PYZ
+2026-11-16T07:01:45.8584389Z 3509 INFO: Building PYZ because PYZ-00.toc is non existent
+2026-11-16T07:01:45.8584988Z 3509 INFO: Building PYZ (ZlibArchive) D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\PYZ-00.pyz
+2026-11-16T07:01:45.9926226Z 3643 INFO: Building PYZ (ZlibArchive) D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\PYZ-00.pyz completed successfully.
+2026-11-16T07:01:46.0106459Z 3659 INFO: checking PKG
+2026-11-16T07:01:46.0107660Z 3659 INFO: Building PKG because PKG-00.toc is non existent
+2026-11-16T07:01:46.0108036Z 3661 INFO: Building PKG (CArchive) NITREWRITTEN.pkg
+2026-11-16T07:01:48.6319276Z 6282 INFO: Building PKG (CArchive) NITREWRITTEN.pkg completed successfully.
+2026-11-16T07:01:48.6444269Z 6295 INFO: Bootloader C:\hostedtoolcache\windows\Python\3.10.11\x64\lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+2026-11-16T07:01:48.6446212Z 6295 INFO: checking EXE
+2026-11-16T07:01:48.6446517Z 6295 INFO: Building EXE because EXE-00.toc is non existent
+2026-11-16T07:01:48.6446771Z 6295 INFO: Building EXE from EXE-00.toc
+2026-11-16T07:01:48.6447034Z 6295 INFO: Copying bootloader EXE to D:\a\NITREWRITTEN\NITREWRITTEN\dist\NITREWRITTEN.exe
+2026-11-16T07:01:48.6463480Z 6297 INFO: Copying icon to EXE
+2026-11-16T07:01:48.6477619Z 6298 INFO: Copying 0 resources to EXE
+2026-11-16T07:01:48.6477961Z 6298 INFO: Embedding manifest in EXE
+2026-11-16T07:01:48.6493707Z 6299 INFO: Appending PKG archive to EXE
+2026-11-16T07:01:48.6574911Z 6307 INFO: Fixing EXE headers
+2026-11-16T07:01:48.7341400Z 6384 INFO: Building EXE from EXE-00.toc completed successfully.
+2026-11-16T07:01:48.7465567Z 6397 INFO: Build complete! The results are available in: D:\a\NITREWRITTEN\NITREWRITTEN\dist
+2026-11-16T07:01:48.8772069Z ##[group]Run softprops/action-gh-release@v1
+2026-11-16T07:01:48.8772334Z with:
+2026-11-16T07:01:48.8772484Z   files: dist/NITREWRITTEN.exe
+2026-11-16T07:01:48.8774663Z   token: ***
+2026-11-16T07:01:48.8774791Z env:
+2026-11-16T07:01:48.8774977Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8775487Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:48.8775788Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8776066Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8776347Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8778241Z   GITHUB_TOKEN: ***
+2026-11-16T07:01:48.8778367Z ##[endgroup]
+2026-11-16T07:01:48.9490743Z (node:1344) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:48.9491264Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:48.9622726Z (node:1344) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T07:01:49.2346273Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:49.4113190Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:49.4113412Z undefined
+2026-11-16T07:01:49.4113535Z retrying... (2 retries remaining)
+2026-11-16T07:01:49.6701151Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:49.8049172Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:49.8049488Z undefined
+2026-11-16T07:01:49.8049667Z retrying... (1 retries remaining)
+2026-11-16T07:01:50.0010799Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:50.2359886Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:50.2360161Z undefined
+2026-11-16T07:01:50.2360330Z retrying... (0 retries remaining)
+2026-11-16T07:01:50.2360526Z ❌ Too many retries. Aborting...
+2026-11-16T07:01:50.2377422Z ##[error]Too many retries.
+2026-11-16T07:01:50.2612312Z Post job cleanup.
+2026-11-16T07:01:50.3276760Z (node:7132) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:50.3277224Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:50.3766462Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T07:01:50.4010143Z git version 2.56.0.windows.4
+2026-11-16T07:01:50.4052510Z Temporarily overriding HOME='D:\a\_temp\24b47478-df6a-4e4c-a84b-0112be17d782' before making global git config changes
+2026-11-16T07:01:50.4053182Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T07:01:50.4058589Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:50.4308394Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T07:01:50.4558792Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T07:01:50.8364382Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T07:01:50.8607541Z http.https://github.com/.extraheader
+2026-11-16T07:01:50.8638611Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-11-16T07:01:50.8898746Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T07:01:51.2921621Z Cleaning up orphan processes
+2026-11-16T07:01:51.3035030Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v3, actions/setup-python@v4, softprops/action-gh-release@v1. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

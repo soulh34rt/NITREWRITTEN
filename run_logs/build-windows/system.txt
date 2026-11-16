@@ -1,0 +1,8 @@
+2026-11-16T07:00:57.3360000Z Job is waiting for a hosted runner to come online.
+2026-11-16T07:00:57.3370000Z Job is about to start running on the hosted runner: GitHub Actions 1000000154
+2026-11-16T07:00:57.3260000Z Evaluating build-windows.if
+2026-11-16T07:00:57.3260000Z Evaluating: success()
+2026-11-16T07:00:57.3260000Z Result: true
+2026-11-16T07:00:57.3270000Z Requested labels: windows-latest
+2026-11-16T07:00:57.3270000Z Job defined at: soulh34rt/NITREWRITTEN/.github/workflows/release.yml@refs/tags/1.0
+2026-11-16T07:00:57.3270000Z Waiting for a runner to pick up this job...

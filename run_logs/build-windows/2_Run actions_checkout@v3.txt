@@ -1,0 +1,94 @@
+﻿2026-11-16T07:01:00.0320979Z ##[group]Run actions/checkout@v3
+2026-11-16T07:01:00.0321685Z with:
+2026-11-16T07:01:00.0321912Z   repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.0324248Z   token: ***
+2026-11-16T07:01:00.0324460Z   ssh-strict: true
+2026-11-16T07:01:00.0324877Z   persist-credentials: true
+2026-11-16T07:01:00.0325122Z   clean: true
+2026-11-16T07:01:00.0325348Z   sparse-checkout-cone-mode: true
+2026-11-16T07:01:00.0325620Z   fetch-depth: 1
+2026-11-16T07:01:00.0325836Z   fetch-tags: false
+2026-11-16T07:01:00.0326053Z   lfs: false
+2026-11-16T07:01:00.0326257Z   submodules: false
+2026-11-16T07:01:00.0326483Z   set-safe-directory: true
+2026-11-16T07:01:00.0326743Z   allow-unsafe-pr-checkout: false
+2026-11-16T07:01:00.0327097Z ##[endgroup]
+2026-11-16T07:01:00.1175639Z (node:9568) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:00.1176565Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:00.1231647Z Syncing repository: soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.1232676Z ##[group]Getting Git version info
+2026-11-16T07:01:00.1233010Z Working directory is 'D:\a\NITREWRITTEN\NITREWRITTEN'
+2026-11-16T07:01:00.1710456Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T07:01:00.4693839Z git version 2.56.0.windows.4
+2026-11-16T07:01:00.4728150Z ##[endgroup]
+2026-11-16T07:01:00.4741212Z Temporarily overriding HOME='D:\a\_temp\835bde05-4b82-425e-bdaf-b6b392ae2c5c' before making global git config changes
+2026-11-16T07:01:00.4741925Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T07:01:00.4746627Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:00.5237519Z Deleting the contents of 'D:\a\NITREWRITTEN\NITREWRITTEN'
+2026-11-16T07:01:00.5242148Z ##[group]Initializing the repository
+2026-11-16T07:01:00.5246858Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:00.5864631Z Initialized empty Git repository in D:/a/NITREWRITTEN/NITREWRITTEN/.git/
+2026-11-16T07:01:00.5892403Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:00.6458741Z ##[endgroup]
+2026-11-16T07:01:00.6459616Z ##[group]Disabling automatic garbage collection
+2026-11-16T07:01:00.6464997Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-11-16T07:01:00.6758470Z ##[endgroup]
+2026-11-16T07:01:00.6759393Z ##[group]Setting up auth
+2026-11-16T07:01:00.6765798Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T07:01:00.7028569Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T07:01:01.9530868Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T07:01:01.9924617Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T07:01:02.4004001Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-11-16T07:01:02.4263629Z ##[endgroup]
+2026-11-16T07:01:02.4264120Z ##[group]Fetching the repository
+2026-11-16T07:01:02.4271121Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +5bad4367ce47e6e312a7a174337efab09b9ba005:refs/tags/1.0
+2026-11-16T07:01:03.2494754Z remote: Enumerating objects: 11, done.        
+2026-11-16T07:01:03.2497354Z remote: Counting objects:   9% (1/11)        
+2026-11-16T07:01:03.2501989Z remote: Counting objects:  18% (2/11)        
+2026-11-16T07:01:03.2502462Z remote: Counting objects:  27% (3/11)        
+2026-11-16T07:01:03.2503009Z remote: Counting objects:  36% (4/11)        
+2026-11-16T07:01:03.2503463Z remote: Counting objects:  45% (5/11)        
+2026-11-16T07:01:03.2503768Z remote: Counting objects:  54% (6/11)        
+2026-11-16T07:01:03.2504103Z remote: Counting objects:  63% (7/11)        
+2026-11-16T07:01:03.2504454Z remote: Counting objects:  72% (8/11)        
+2026-11-16T07:01:03.2504752Z remote: Counting objects:  81% (9/11)        
+2026-11-16T07:01:03.2505043Z remote: Counting objects:  90% (10/11)        
+2026-11-16T07:01:03.2505584Z remote: Counting objects: 100% (11/11)        
+2026-11-16T07:01:03.2506212Z remote: Counting objects: 100% (11/11), done.        
+2026-11-16T07:01:03.2506587Z remote: Compressing objects:  14% (1/7)        
+2026-11-16T07:01:03.2506958Z remote: Compressing objects:  28% (2/7)        
+2026-11-16T07:01:03.2507284Z remote: Compressing objects:  42% (3/7)        
+2026-11-16T07:01:03.2507685Z remote: Compressing objects:  57% (4/7)        
+2026-11-16T07:01:03.2508071Z remote: Compressing objects:  71% (5/7)        
+2026-11-16T07:01:03.2508381Z remote: Compressing objects:  85% (6/7)        
+2026-11-16T07:01:03.2508694Z remote: Compressing objects: 100% (7/7)        
+2026-11-16T07:01:03.2509017Z remote: Compressing objects: 100% (7/7), done.        
+2026-11-16T07:01:03.2678314Z remote: Total 11 (delta 0), reused 8 (delta 0), pack-reused 0 (from 0)        
+2026-11-16T07:01:03.3654894Z From https://github.com/soulh34rt/NITREWRITTEN
+2026-11-16T07:01:03.3656113Z  * [new ref]         5bad4367ce47e6e312a7a174337efab09b9ba005 -> 1.0
+2026-11-16T07:01:03.3686414Z ##[endgroup]
+2026-11-16T07:01:03.3687699Z ##[group]Determining the checkout info
+2026-11-16T07:01:03.3688640Z ##[endgroup]
+2026-11-16T07:01:03.3688919Z ##[group]Checking out the ref
+2026-11-16T07:01:03.3696317Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/tags/1.0
+2026-11-16T07:01:03.4178341Z Note: switching to 'refs/tags/1.0'.
+2026-11-16T07:01:03.4178686Z 
+2026-11-16T07:01:03.4178905Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T07:01:03.4179350Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T07:01:03.4179667Z state without impacting any branches by switching back to a branch.
+2026-11-16T07:01:03.4179882Z 
+2026-11-16T07:01:03.4180063Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T07:01:03.4180634Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T07:01:03.4180921Z 
+2026-11-16T07:01:03.4181012Z   git switch -c <new-branch-name>
+2026-11-16T07:01:03.4181247Z 
+2026-11-16T07:01:03.4181334Z Or undo this operation with:
+2026-11-16T07:01:03.4181477Z 
+2026-11-16T07:01:03.4181557Z   git switch -
+2026-11-16T07:01:03.4181694Z 
+2026-11-16T07:01:03.4182098Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T07:01:03.4182382Z 
+2026-11-16T07:01:03.4182571Z HEAD is now at 5bad436 Fix release.yml dependencies again
+2026-11-16T07:01:03.4315951Z ##[endgroup]
+2026-11-16T07:01:03.4671505Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format='%H'
+2026-11-16T07:01:03.4913439Z '5bad4367ce47e6e312a7a174337efab09b9ba005'

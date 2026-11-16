@@ -1,0 +1,14 @@
+﻿2026-11-16T07:01:50.2612297Z Post job cleanup.
+2026-11-16T07:01:50.3276717Z (node:7132) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:50.3277221Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:50.3766423Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T07:01:50.4010113Z git version 2.56.0.windows.4
+2026-11-16T07:01:50.4052472Z Temporarily overriding HOME='D:\a\_temp\24b47478-df6a-4e4c-a84b-0112be17d782' before making global git config changes
+2026-11-16T07:01:50.4053178Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T07:01:50.4058585Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\NITREWRITTEN\NITREWRITTEN
+2026-11-16T07:01:50.4308384Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T07:01:50.4558716Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T07:01:50.8364333Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T07:01:50.8607498Z http.https://github.com/.extraheader
+2026-11-16T07:01:50.8638588Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-11-16T07:01:50.8898719Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""

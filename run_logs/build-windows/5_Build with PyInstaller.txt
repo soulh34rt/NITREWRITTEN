@@ -1,0 +1,82 @@
+﻿2026-11-16T07:01:42.0832644Z ##[group]Run pyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py
+2026-11-16T07:01:42.0833054Z [36;1mpyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py[0m
+2026-11-16T07:01:42.0883149Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T07:01:42.0883354Z env:
+2026-11-16T07:01:42.0883519Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0883783Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:42.0884060Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884313Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884552Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.0884739Z ##[endgroup]
+2026-11-16T07:01:42.4314932Z 81 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.10
+2026-11-16T07:01:42.4315213Z 81 INFO: Python: 3.10.11
+2026-11-16T07:01:42.4371467Z 87 INFO: Platform: Windows-10-10.0.26100-SP0
+2026-11-16T07:01:42.4372052Z 87 INFO: Python environment: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:42.4375330Z 87 INFO: wrote D:\a\NITREWRITTEN\NITREWRITTEN\NITREWRITTEN.spec
+2026-11-16T07:01:42.4441441Z 93 INFO: Module search paths (PYTHONPATH):
+2026-11-16T07:01:42.4441778Z ['C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\Scripts\\pyinstaller.exe',
+2026-11-16T07:01:42.4442053Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\python310.zip',
+2026-11-16T07:01:42.4442295Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\DLLs',
+2026-11-16T07:01:42.4442506Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib',
+2026-11-16T07:01:42.4442709Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64',
+2026-11-16T07:01:42.4443009Z  'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages',
+2026-11-16T07:01:42.4443224Z  'D:\\a\\NITREWRITTEN\\NITREWRITTEN']
+2026-11-16T07:01:42.5653662Z 215 INFO: checking Analysis
+2026-11-16T07:01:42.5654290Z 215 INFO: Building Analysis because Analysis-00.toc is non existent
+2026-11-16T07:01:42.5654736Z 215 INFO: Looking for Python shared library...
+2026-11-16T07:01:42.5655166Z 215 INFO: Using Python shared library: C:\hostedtoolcache\windows\Python\3.10.11\x64\python310.dll
+2026-11-16T07:01:42.5655617Z 215 INFO: Running Analysis Analysis-00.toc
+2026-11-16T07:01:42.5655875Z 215 INFO: Target bytecode optimization level: 0
+2026-11-16T07:01:42.5656149Z 215 INFO: Initializing module dependency graph...
+2026-11-16T07:01:42.5671841Z 217 INFO: Initializing module graph hook caches...
+2026-11-16T07:01:42.5779254Z 228 INFO: Analyzing modules for base_library.zip ...
+2026-11-16T07:01:42.8791596Z 529 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:42.9139162Z 564 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:43.1932243Z 843 INFO: Processing standard module hook 'hook-math.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:43.6111434Z 1261 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.1970920Z 1847 INFO: Caching module dependency graph...
+2026-11-16T07:01:44.2210738Z 1871 INFO: Analyzing D:\a\NITREWRITTEN\NITREWRITTEN\nwnmods.py
+2026-11-16T07:01:44.3168339Z 1967 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.3258046Z 1976 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+2026-11-16T07:01:44.3263038Z 1977 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+2026-11-16T07:01:44.5243970Z 2175 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.6844769Z 2334 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.6975818Z 2347 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.7391255Z 2388 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9223783Z 2572 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9299041Z 2580 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:44.9983641Z 2648 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.1112681Z 2761 INFO: Processing module hooks (post-graph stage)...
+2026-11-16T07:01:45.2319263Z 2882 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.2638899Z 2913 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks'
+2026-11-16T07:01:45.2714241Z 2922 INFO: Performing binary vs. data reclassification (923 entries)
+2026-11-16T07:01:45.3025598Z 2952 INFO: Looking for ctypes DLLs
+2026-11-16T07:01:45.3037915Z 2954 INFO: Analyzing run-time hooks ...
+2026-11-16T07:01:45.3049332Z 2955 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+2026-11-16T07:01:45.3062485Z 2956 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.10.11\\x64\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+2026-11-16T07:01:45.3229184Z 2972 INFO: Creating base_library.zip...
+2026-11-16T07:01:45.3327760Z 2983 INFO: Looking for dynamic libraries
+2026-11-16T07:01:45.4123351Z 3062 INFO: Extra DLL search directories (AddDllDirectory): []
+2026-11-16T07:01:45.4123687Z 3062 INFO: Extra DLL search directories (PATH): []
+2026-11-16T07:01:45.8167981Z 3466 INFO: Warnings written to D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\warn-NITREWRITTEN.txt
+2026-11-16T07:01:45.8364671Z 3485 INFO: Graph cross-reference written to D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\xref-NITREWRITTEN.html
+2026-11-16T07:01:45.8583940Z 3509 INFO: checking PYZ
+2026-11-16T07:01:45.8584384Z 3509 INFO: Building PYZ because PYZ-00.toc is non existent
+2026-11-16T07:01:45.8584976Z 3509 INFO: Building PYZ (ZlibArchive) D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\PYZ-00.pyz
+2026-11-16T07:01:45.9926175Z 3643 INFO: Building PYZ (ZlibArchive) D:\a\NITREWRITTEN\NITREWRITTEN\build\NITREWRITTEN\PYZ-00.pyz completed successfully.
+2026-11-16T07:01:46.0106446Z 3659 INFO: checking PKG
+2026-11-16T07:01:46.0107645Z 3659 INFO: Building PKG because PKG-00.toc is non existent
+2026-11-16T07:01:46.0108033Z 3661 INFO: Building PKG (CArchive) NITREWRITTEN.pkg
+2026-11-16T07:01:48.6319226Z 6282 INFO: Building PKG (CArchive) NITREWRITTEN.pkg completed successfully.
+2026-11-16T07:01:48.6444228Z 6295 INFO: Bootloader C:\hostedtoolcache\windows\Python\3.10.11\x64\lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+2026-11-16T07:01:48.6445272Z 6295 INFO: checking EXE
+2026-11-16T07:01:48.6446514Z 6295 INFO: Building EXE because EXE-00.toc is non existent
+2026-11-16T07:01:48.6446769Z 6295 INFO: Building EXE from EXE-00.toc
+2026-11-16T07:01:48.6447032Z 6295 INFO: Copying bootloader EXE to D:\a\NITREWRITTEN\NITREWRITTEN\dist\NITREWRITTEN.exe
+2026-11-16T07:01:48.6463477Z 6297 INFO: Copying icon to EXE
+2026-11-16T07:01:48.6477616Z 6298 INFO: Copying 0 resources to EXE
+2026-11-16T07:01:48.6477959Z 6298 INFO: Embedding manifest in EXE
+2026-11-16T07:01:48.6493702Z 6299 INFO: Appending PKG archive to EXE
+2026-11-16T07:01:48.6574908Z 6307 INFO: Fixing EXE headers
+2026-11-16T07:01:48.7341352Z 6384 INFO: Building EXE from EXE-00.toc completed successfully.
+2026-11-16T07:01:48.7465555Z 6397 INFO: Build complete! The results are available in: D:\a\NITREWRITTEN\NITREWRITTEN\dist

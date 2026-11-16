@@ -1,0 +1,47 @@
+﻿2026-11-16T07:01:34.7537550Z ##[group]Run python -m pip install --upgrade pip
+2026-11-16T07:01:34.7537859Z [36;1mpython -m pip install --upgrade pip[0m
+2026-11-16T07:01:34.7538064Z [36;1mpip install -r requirements.txt[0m
+2026-11-16T07:01:34.7538218Z [36;1mpip install pyinstaller[0m
+2026-11-16T07:01:34.7806282Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-16T07:01:34.7806495Z env:
+2026-11-16T07:01:34.7806652Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7806921Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:34.7807175Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807407Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807628Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:34.7807804Z ##[endgroup]
+2026-11-16T07:01:35.7642833Z Requirement already satisfied: pip in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (26.3)
+2026-11-16T07:01:36.9712431Z Collecting Pillow>=10.0.0 (from -r requirements.txt (line 1))
+2026-11-16T07:01:37.0288035Z   Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl.metadata (9.3 kB)
+2026-11-16T07:01:37.1018693Z Collecting pyinstaller>=6.0.0 (from -r requirements.txt (line 2))
+2026-11-16T07:01:37.1158566Z   Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl.metadata (8.5 kB)
+2026-11-16T07:01:37.1731831Z Collecting altgraph (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.1868274Z   Downloading altgraph-0.17.5-py2.py3-none-any.whl.metadata (7.5 kB)
+2026-11-16T07:01:37.2628997Z Collecting packaging>=22.0 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.2795528Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+2026-11-16T07:01:37.3336880Z Collecting pefile>=2022.5.30 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.3477186Z   Downloading pefile-2024.8.26-py3-none-any.whl.metadata (1.4 kB)
+2026-11-16T07:01:37.4062721Z Collecting pyinstaller-hooks-contrib>=2026.7 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.4199920Z   Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl.metadata (16 kB)
+2026-11-16T07:01:37.4716323Z Collecting pywin32-ctypes>=0.2.1 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:37.4854185Z   Downloading pywin32_ctypes-0.2.3-py3-none-any.whl.metadata (3.9 kB)
+2026-11-16T07:01:37.5020492Z Requirement already satisfied: setuptools>=42.0.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller>=6.0.0->-r requirements.txt (line 2)) (65.5.0)
+2026-11-16T07:01:37.5203094Z Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl (7.2 MB)
+2026-11-16T07:01:37.6625057Z    ---------------------------------------- 7.2/7.2 MB 63.3 MB/s  0:00:00
+2026-11-16T07:01:37.6787376Z Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl (1.5 MB)
+2026-11-16T07:01:37.7086371Z    ---------------------------------------- 1.5/1.5 MB 38.5 MB/s  0:00:00
+2026-11-16T07:01:37.7222402Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+2026-11-16T07:01:37.7522511Z Downloading pefile-2024.8.26-py3-none-any.whl (74 kB)
+2026-11-16T07:01:37.7841237Z Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl (463 kB)
+2026-11-16T07:01:37.8185465Z Downloading pywin32_ctypes-0.2.3-py3-none-any.whl (30 kB)
+2026-11-16T07:01:37.8487169Z Downloading altgraph-0.17.5-py2.py3-none-any.whl (21 kB)
+2026-11-16T07:01:37.9295253Z Installing collected packages: altgraph, pywin32-ctypes, Pillow, pefile, packaging, pyinstaller-hooks-contrib, pyinstaller
+2026-11-16T07:01:41.0810546Z 
+2026-11-16T07:01:41.0832630Z Successfully installed Pillow-12.3.0 altgraph-0.17.5 packaging-26.3 pefile-2024.8.26 pyinstaller-6.22.3 pyinstaller-hooks-contrib-2026.10 pywin32-ctypes-0.2.3
+2026-11-16T07:01:41.9091729Z Requirement already satisfied: pyinstaller in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (6.22.3)
+2026-11-16T07:01:41.9107450Z Requirement already satisfied: altgraph in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (0.17.5)
+2026-11-16T07:01:41.9111145Z Requirement already satisfied: packaging>=22.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (26.3)
+2026-11-16T07:01:41.9114803Z Requirement already satisfied: pefile>=2022.5.30 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (2024.8.26)
+2026-11-16T07:01:41.9117654Z Requirement already satisfied: pyinstaller-hooks-contrib>=2026.7 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (2026.10)
+2026-11-16T07:01:41.9120543Z Requirement already satisfied: pywin32-ctypes>=0.2.1 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (0.2.3)
+2026-11-16T07:01:41.9122788Z Requirement already satisfied: setuptools>=42.0.0 in c:\hostedtoolcache\windows\python\3.10.11\x64\lib\site-packages (from pyinstaller) (65.5.0)

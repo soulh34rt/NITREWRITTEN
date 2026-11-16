@@ -464,7 +464,7 @@ class _CatalogParser(HTMLParser):
             return
         href = next(h for h in row[idx]["h"] if "/project/" in h)
         url = urljoin(self.base, htmlmod.unescape(href)).split("#")[0]
-        parts = urlparse(url).path.strip("/").split("/")  # project/<juego>/<categoria...>/<slug>
+        parts = urlparse(url).path.strip("/").split("/")  # project/<game>/<category...>/<slug>
         get = lambda k: texts[k] if k < len(texts) else ""  # noqa: E731
         votes = texts[-1] if texts and texts[-1].lstrip("-").isdigit() else "0"
         self.items.append({
@@ -532,12 +532,12 @@ class _Blocks(HTMLParser):
             self.buf.append(d)
 
 
-FIELD_LABELS = {"Category": "Categoria", "Game": "Juego", "Requirements": "Requisitos",
-                "Language": "Idioma", "Tags": "Etiquetas", "Permissions": "Permisos"}
+FIELD_LABELS = {"Category": "Category", "Game": "Game", "Requirements": "Requirements",
+                "Language": "Language", "Tags": "Tags", "Permissions": "Permissions"}
 
 
 def parse_project(html: str, url: str) -> dict:
-    """Extrae titulo, descripcion, datos y enlaces de descarga de la pagina de un proyecto (mejor esfuerzo)."""
+    """Extracts title, description, data and download links from a project page (best effort)."""
     bp = _Blocks()
     bp.feed(html)
     bp.close()
@@ -564,7 +564,7 @@ def parse_project(html: str, url: str) -> dict:
     for b in blocks:
         m = re.match(r"(?:Author|Submitted by|Created by)\s*:?\s*(.+?)(?:,|\s+on\s|$)", b, re.I)
         if m:
-            fields["Autor"] = m.group(1).strip()
+            fields["Author"] = m.group(1).strip()
             break
     files, seen = [], set()
     pats = (r'<a\b[^>]*href="([^"]*pubdlcnt\.php\?[^"]*fid=\d+[^"]*)"[^>]*>(.*?)</a>',
@@ -1444,7 +1444,7 @@ def run_gui(initial_user=None):
                 ph = tk.PhotoImage(data=base64.b64encode(data))
                 ph = ph.subsample(max(1, -(-ph.width() // 240)), max(1, -(-ph.height() // 180)))
             except tk.TclError:
-                try:  # JPG/WebP: solo si hay Pillow instalado
+                try:  # JPG/WebP: only if Pillow is installed
                     from PIL import Image, ImageTk  # type: ignore
                     im = Image.open(io.BytesIO(data))
                     im.thumbnail((240, 180))

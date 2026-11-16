@@ -1,0 +1,40 @@
+﻿2026-11-16T07:01:33.5786656Z ##[group]Run python -m pip install --upgrade pip
+2026-11-16T07:01:33.5787066Z [36;1mpython -m pip install --upgrade pip[0m
+2026-11-16T07:01:33.5787383Z [36;1mpip install -r requirements.txt[0m
+2026-11-16T07:01:33.5787675Z [36;1mpip install pyinstaller[0m
+2026-11-16T07:01:33.5806417Z shell: /usr/bin/bash -e {0}
+2026-11-16T07:01:33.5806692Z env:
+2026-11-16T07:01:33.5807007Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.22/x64
+2026-11-16T07:01:33.5807444Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.22/x64/lib/pkgconfig
+2026-11-16T07:01:33.5807825Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.22/x64
+2026-11-16T07:01:33.5808178Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.22/x64
+2026-11-16T07:01:33.5808520Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.22/x64
+2026-11-16T07:01:33.5808877Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.22/x64/lib
+2026-11-16T07:01:33.5809195Z ##[endgroup]
+2026-11-16T07:01:34.2775054Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (26.3)
+2026-11-16T07:01:35.3254712Z Collecting Pillow>=10.0.0 (from -r requirements.txt (line 1))
+2026-11-16T07:01:35.3573306Z   Downloading pillow-12.3.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+2026-11-16T07:01:35.3934423Z Collecting pyinstaller>=6.0.0 (from -r requirements.txt (line 2))
+2026-11-16T07:01:35.4017167Z   Downloading pyinstaller-6.22.3-py3-none-manylinux2014_x86_64.whl.metadata (8.5 kB)
+2026-11-16T07:01:35.4165109Z Collecting altgraph (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:35.4241841Z   Downloading altgraph-0.17.5-py2.py3-none-any.whl.metadata (7.5 kB)
+2026-11-16T07:01:35.4401837Z Collecting packaging>=22.0 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:35.4487433Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+2026-11-16T07:01:35.4654257Z Collecting pyinstaller-hooks-contrib>=2026.7 (from pyinstaller>=6.0.0->-r requirements.txt (line 2))
+2026-11-16T07:01:35.4731839Z   Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl.metadata (16 kB)
+2026-11-16T07:01:35.4767867Z Requirement already satisfied: setuptools>=42.0.0 in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (from pyinstaller>=6.0.0->-r requirements.txt (line 2)) (79.0.1)
+2026-11-16T07:01:35.4894433Z Downloading pillow-12.3.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+2026-11-16T07:01:35.5499086Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 175.1 MB/s  0:00:00
+2026-11-16T07:01:35.5577061Z Downloading pyinstaller-6.22.3-py3-none-manylinux2014_x86_64.whl (764 kB)
+2026-11-16T07:01:35.5637914Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 765.0/765.0 kB 137.2 MB/s  0:00:00
+2026-11-16T07:01:35.5718830Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+2026-11-16T07:01:35.5815686Z Downloading pyinstaller_hooks_contrib-2026.10-py3-none-any.whl (463 kB)
+2026-11-16T07:01:35.5947617Z Downloading altgraph-0.17.5-py2.py3-none-any.whl (21 kB)
+2026-11-16T07:01:35.6394636Z Installing collected packages: altgraph, Pillow, packaging, pyinstaller-hooks-contrib, pyinstaller
+2026-11-16T07:01:36.1921452Z 
+2026-11-16T07:01:36.1931920Z Successfully installed Pillow-12.3.0 altgraph-0.17.5 packaging-26.3 pyinstaller-6.22.3 pyinstaller-hooks-contrib-2026.10
+2026-11-16T07:01:36.9336498Z Requirement already satisfied: pyinstaller in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (6.22.3)
+2026-11-16T07:01:36.9359862Z Requirement already satisfied: altgraph in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (from pyinstaller) (0.17.5)
+2026-11-16T07:01:36.9362947Z Requirement already satisfied: packaging>=22.0 in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (from pyinstaller) (26.3)
+2026-11-16T07:01:36.9365779Z Requirement already satisfied: pyinstaller-hooks-contrib>=2026.7 in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (from pyinstaller) (2026.10)
+2026-11-16T07:01:36.9368824Z Requirement already satisfied: setuptools>=42.0.0 in /opt/hostedtoolcache/Python/3.10.22/x64/lib/python3.10/site-packages (from pyinstaller) (79.0.1)

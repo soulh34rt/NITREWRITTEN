@@ -1,0 +1,29 @@
+﻿2026-11-16T07:01:48.8772047Z ##[group]Run softprops/action-gh-release@v1
+2026-11-16T07:01:48.8772330Z with:
+2026-11-16T07:01:48.8772482Z   files: dist/NITREWRITTEN.exe
+2026-11-16T07:01:48.8774661Z   token: ***
+2026-11-16T07:01:48.8774790Z env:
+2026-11-16T07:01:48.8774974Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8775485Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.10.11\x64/lib/pkgconfig
+2026-11-16T07:01:48.8775786Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8776065Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8776339Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.10.11\x64
+2026-11-16T07:01:48.8778239Z   GITHUB_TOKEN: ***
+2026-11-16T07:01:48.8778365Z ##[endgroup]
+2026-11-16T07:01:48.9490695Z (node:1344) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T07:01:48.9491170Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T07:01:48.9622684Z (node:1344) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T07:01:49.2346225Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:49.4113154Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:49.4113409Z undefined
+2026-11-16T07:01:49.4113533Z retrying... (2 retries remaining)
+2026-11-16T07:01:49.6701112Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:49.8049126Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:49.8049485Z undefined
+2026-11-16T07:01:49.8049665Z retrying... (1 retries remaining)
+2026-11-16T07:01:50.0010765Z 👩‍🏭 Creating new GitHub release for tag 1.0...
+2026-11-16T07:01:50.2359852Z ⚠️ GitHub release failed with status: 403
+2026-11-16T07:01:50.2360159Z undefined
+2026-11-16T07:01:50.2360291Z retrying... (0 retries remaining)
+2026-11-16T07:01:50.2360523Z ❌ Too many retries. Aborting...
+2026-11-16T07:01:50.2377402Z ##[error]Too many retries.
