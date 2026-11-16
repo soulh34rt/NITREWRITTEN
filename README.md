@@ -1,46 +1,46 @@
 # NITREWRITTEN (NWN Mod Manager)
 
-Un gestor de mods profesional para **Neverwinter Nights** (Enhanced Edition y Diamond).
+A professional mod manager for Neverwinter Nights (Enhanced Edition and Diamond).
 
 ![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)
 
-## Características
+## Features
 
-- **Instalación sencilla**: Soporta archivos .zip, .7z, .rar, .hak, .tlk, .mod y más.
-- **Integración con The Neverwinter Vault**: Busca e instala mods directamente desde la aplicación.
-- **Gestión de Conflictos**: Detecta y muestra archivos duplicados entre mods activos.
-- **Perfiles**: Crea perfiles para cambiar rápidamente entre diferentes conjuntos de mods.
-- **Copias de Seguridad**: Respalda tus partidas guardadas y archivos importantes con un clic.
-- **Multiplataforma**: Funciona nativamente en Windows, Linux y macOS.
+1. Easy Installation: Supports .zip, .7z, .rar, .hak, .tlk, .mod and more formats.
+2. Neverwinter Vault Integration: Search and install mods directly from the application.
+3. Conflict Management: Detects and displays duplicate files between active mods.
+4. Profiles: Create profiles to quickly switch between different mod sets.
+5. Backups: Backup your save games and characters with a single click.
+6. Cross-platform: Native support for Windows, Linux, and macOS.
 
-## Instalación
+## Installation
 
 ### Windows
-Puedes descargar el ejecutable `.exe` desde la sección de [Releases](https://github.com/jgbed/NITREWRITTEN/releases).
+Download the NITREWRITTEN.exe executable from the Releases section.
 
-O ejecutarlo desde el código fuente:
+Alternatively, run from source:
 ```bash
 pip install -r requirements.txt
 python nwnmods.py
 ```
 
 ### Linux (AppImage)
-Descarga el archivo `.AppImage` desde [Releases](https://github.com/jgbed/NITREWRITTEN/releases), dale permisos de ejecución y lánzalo.
+Download the .AppImage file from Releases, grant execution permissions, and run it.
 
-## Uso
+## Usage
 
-La interfaz es intuitiva:
-1. **Detectar**: Encuentra automáticamente tus instalaciones de NWN.
-2. **Mods**: Instala archivos descargados o explora los instalados.
-3. **Vault**: Navega por el catálogo de mods online más grande de NWN.
-4. **Perfiles**: Guarda tus configuraciones favoritas.
+The interface is designed to be intuitive:
+1. Detect: Automatically finds your NWN installations.
+2. Mods: Install downloaded mods or manage existing ones.
+3. Vault: Browse the largest online NWN mod catalog.
+4. Profiles: Save and load your favorite configurations.
 
-## Requisitos
-- Python 3.8 o superior.
-- `tkinter` (incluido en la mayoría de distribuciones de Python).
-- `Pillow` (para soporte extendido de imágenes en el catálogo).
+## Requirements
+1. Python 3.8 or higher.
+2. tkinter (usually included with Python).
+3. Pillow (optional, for extended image support in the catalog).
 
-## Licencia
-Este proyecto está bajo la licencia MIT.
+## License
+This project is licensed under the MIT License.

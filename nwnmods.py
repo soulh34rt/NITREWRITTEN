@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""nwnmods - Mod manager para Neverwinter Nights (Enhanced Edition y Diamond/original).
+"""nwnmods - Professional Mod Manager for Neverwinter Nights (Enhanced Edition and Diamond).
 
-Funciona en Windows, Linux y macOS. Solo usa la biblioteca estandar de Python 3.8+
-(la interfaz usa tkinter; para .7z/.rar conviene tener 7-Zip instalado).
+Works on Windows, Linux, and macOS. Uses Python 3.8+ standard library.
+(UI uses tkinter; 7-Zip recommended for .7z/.rar support).
 
-  python3 nwnmods.py                 -> abre la interfaz grafica
-  python3 nwnmods.py detect          -> muestra las instalaciones encontradas
-  python3 nwnmods.py install X.zip   -> instala un mod (zip, 7z, rar, tar.*, .hak, .tlk, .mod...)
+  python3 nwnmods.py                 -> open the graphical interface
+  python3 nwnmods.py detect          -> show detected installations
+  python3 nwnmods.py install X.zip   -> install a mod (zip, 7z, rar, tar, hak, tlk, mod...)
   python3 nwnmods.py list | enable N | disable N | remove N | conflicts
-  python3 nwnmods.py backup | restore ARCHIVO.zip | launch
-Opciones globales: --game N (indice de 'detect')  --user RUTA (carpeta de usuario manual)
+  python3 nwnmods.py backup | restore FILE.zip | launch
+Global options: --game N (index from detect)  --user PATH (manual data folder)
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ from urllib.parse import unquote, urljoin, urlparse
 SYS = platform.system()  # Windows / Linux / Darwin
 APP = "nwnmods"
 STEAM_APPID_EE = "704450"
-UA = "nwnmods/1.0 (gestor de mods personal)"
+UA = "nwnmods/1.0 (personal mod manager)"
 
 
 class Err(Exception):
@@ -76,7 +76,7 @@ def save_cfg(c: dict):
     CFG.write_text(json.dumps(c, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-# --------------------------------------------------------------------------- deteccion
+# --------------------------------------------------------------------------- detection
 def documents_dir() -> Path:
     if SYS == "Windows":
         try:
@@ -111,7 +111,7 @@ def safe_dirs(p: Path):
 
 
 def classify(p: Path):
-    """'EE', 'Diamond' o None segun los archivos de la carpeta."""
+    """'EE', 'Diamond' or None based on folder contents."""
     try:
         if (p / "data/nwn_base.key").exists() or any(p.glob("bin/*/nwmain*")):
             return "EE"
@@ -867,9 +867,9 @@ def run_gui(initial_user=None):
             
             btn_frame = ttk.Frame(top)
             btn_frame.pack(side="left", padx=5)
-            for txt, fn in (("Detectar", self.detect), ("Agregar carpeta…", self.add_folder),
-                            ("Abrir datos", lambda: self.game and open_path(self.game.user)),
-                            ("▶ Jugar", self.play)):
+            for txt, fn in (("Detect", self.detect), ("Add folder…", self.add_folder),
+                            ("Open data", lambda: self.game and open_path(self.game.user)),
+                            ("▶ Play", self.play)):
                 ttk.Button(btn_frame, text=txt, command=fn).pack(side="left", padx=2)
             self.info = ttk.Label(self, padding=(10, 0), foreground="#555")
             self.info.pack(fill="x")
@@ -879,8 +879,8 @@ def run_gui(initial_user=None):
             self.tab_mods, self.tab_cont, self.tab_vault = ttk.Frame(nb), ttk.Frame(nb), ttk.Frame(nb)
             self.tab_prof, self.tab_bak = ttk.Frame(nb), ttk.Frame(nb)
             self.tab_set, self.tab_log = ttk.Frame(nb), ttk.Frame(nb)
-            for t, n in ((self.tab_mods, "Mods"), (self.tab_vault, "Vault"), (self.tab_cont, "Contenido"), (self.tab_prof, "Perfiles"),
-                         (self.tab_bak, "Copias"), (self.tab_set, "Ajustes"), (self.tab_log, "Registro")):
+            for t, n in ((self.tab_mods, "Mods"), (self.tab_vault, "Vault"), (self.tab_cont, "Content"), (self.tab_prof, "Profiles"),
+                         (self.tab_bak, "Backups"), (self.tab_set, "Settings"), (self.tab_log, "Log")):
                 nb.add(t, text=n)
             self._build_mods()
             self._build_vault()
