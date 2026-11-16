@@ -11,13 +11,30 @@ Built with a focus on simplicity and reliability, it keeps your game clean while
 
 ## 1. KEY FEATURES
 
-1. **Streamlined Installation**: Drop any archive (.zip, .7z, .rar, .tar.gz) or individual game file (.hak, .tlk, .mod) and let the manager handle the directory structure automatically.
+1. **Streamlined Installation**: Drop any archive (.zip, .7z, .rar, .tar.gz) or individual game file (.hak, .tlk, .mod) and let the manager handle the directory structure automatically. 7-Zip is bundled — no external tools needed.
 2. **Neverwinter Vault Integration**: Browse, search, and download thousands of projects directly within the app, complete with images and detailed descriptions.
 3. **Advanced Conflict Engine**: Identify overlapping files between different mods to prevent game instability and ensure the correct content loads.
-4. **Safe Clean Up**: Preview and move unmanaged files to a recovery folder. Saves and characters are protected by default.
+4. **Safe Clean Up**: Preview and move unmanaged files to a recovery folder (`.nwnmods/trash/`). Nothing is ever deleted without confirmation. Saves and characters are protected by default.
 5. **Dark Mode & Modern UI**: A clean, responsive interface with full support for Dark Mode.
 6. **Robust Backup System**: One-click character and save-game backups.
 7. **Multi-Platform Native Performance**: Native Linux support (AppImage) plus Windows executable.
+
+### Additional features
+
+- **Save manager per mod**: switch, archive and restore save folders without ever deleting them.
+- **Dependencies**: declare `requires` between mods; enable/disable checks them (`--force` to override).
+- **Adopt existing installs**: register files you installed by hand, snapshot the original game files and restore them later.
+- **Mod metadata**: notes, rating, author, version and Vault URL per mod, with search.
+- **Groups**: organize mods into groups and enable/disable them together.
+- **BIK to WBM conversion**: converts BIK movies for Enhanced Edition using FFmpeg (optional).
+- **Steam Workshop**: detect and import EE Workshop subscriptions.
+- **Export / import**: share individual mods or whole profiles as files.
+- **Folder aliases**: redirect content folders (e.g. `hak`) to custom locations.
+- **Per-installation settings**: separate preferences per detected game installation.
+- **Character explorer & portraits**: browse `localvault` characters and portraits.
+- **Playtime log**: tracks your play time per mod (recovered after a crash).
+- **NWN log review**: after launching the game, errors found in the NWN log are reported.
+- **Basic mode**: a minimal Install / Play / Quit launcher (switch to Advanced anytime).
 
 ---
 
@@ -50,7 +67,37 @@ If you prefer to run from source or contribute:
 
 ---
 
-## 4. CONTRIBUTING
+## 4. COMMAND LINE INTERFACE
+
+Everything the GUI does is also available from the terminal (`python nwnmods.py <command>` or `python -m nwnmods <command>`):
+
+| Command | Description |
+|---------|-------------|
+| `gui` | Launch the graphical interface (default) |
+| `detect` | Show detected game installations |
+| `install <archive>` | Install a mod archive (`--name`, `--force`) |
+| `enable` / `disable` / `remove` | Manage installed mods (`--force` bypasses dependency checks) |
+| `list` / `conflicts` / `search` | Inspect the library |
+| `backup` / `restore` | Backup and restore saves, characters and vaults |
+| `launch` | Start the game (records playtime) |
+| `adopt` / `snapshot` / `restore-original` / `changed` / `unmanaged` | Manage pre-existing installs and the original snapshot |
+| `note` / `rate` / `meta` | Edit mod metadata |
+| `group` | Create and manage mod groups |
+| `saves` | List, switch, archive or restore save sets per mod |
+| `chars` / `portraits` | Browse characters and portraits |
+| `playtime` | Show playtime report per mod |
+| `workshop list` / `workshop import` | Steam Workshop items (EE) |
+| `convert-bik` | Convert BIK movies to WBM (requires FFmpeg) |
+| `export` / `import` | Export or import a mod as a file |
+| `export-profile` / `import-profile` | Export or import a profile |
+| `alias` | Manage folder aliases |
+| `extmap` | Show or reset the extension map |
+
+Use `--help` on any command for details.
+
+---
+
+## 5. CONTRIBUTING
 
 Contributions are welcome! If you find a bug or have a feature request, please open an issue or submit a pull request.
 
