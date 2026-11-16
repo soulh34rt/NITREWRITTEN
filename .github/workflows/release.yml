@@ -65,7 +65,9 @@ jobs:
           cp resources/pluma.desktop "$APPDIR/NITREWRITTEN.desktop"
           cp resources/pluma.desktop "$APPDIR/usr/share/applications/NITREWRITTEN.desktop"
           cp resources/pluma.svg "$APPDIR/NITREWRITTEN.svg"
+          cp resources/pluma.svg "$APPDIR/pluma.svg"
           cp resources/pluma.svg "$APPDIR/usr/share/icons/hicolor/512x512/apps/NITREWRITTEN.svg"
+          cp resources/pluma.svg "$APPDIR/usr/share/icons/hicolor/512x512/apps/pluma.svg"
           cat > "$APPDIR/AppRun" <<'EOF'
           #!/bin/sh
           SELF=$(readlink -f "$0")
