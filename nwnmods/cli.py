@@ -30,7 +30,9 @@ def cli(argv):
     i.add_argument("--force", action="store_true", help="overwrite (with backup)")
     i.add_argument("--keep-case", action="store_true")
     for c in ("enable", "disable", "remove"):
-        sp.add_parser(c).add_argument("name")
+        p = sp.add_parser(c)
+        p.add_argument("name")
+        p.add_argument("--force", action="store_true", help="ignore dependency checks")
     for c in ("list", "conflicts", "backup", "launch"):
         sp.add_parser(c)
     sp.add_parser("restore").add_argument("zip")
@@ -63,11 +65,11 @@ def cli(argv):
         for n, m in lib.mods.items():
             print(f"{'[ON]' if m['enabled'] else '[OFF]'} {n}  ({len(m['files'])} files)")
     elif a.cmd == "enable":
-        lib.enable(a.name, lambda c: "overwrite")
+        lib.enable(a.name, lambda c: "overwrite", force_deps=getattr(a, 'force', False))
     elif a.cmd == "disable":
-        lib.disable(a.name)
+        lib.disable(a.name, force_deps=getattr(a, 'force', False))
     elif a.cmd == "remove":
-        lib.remove(a.name)
+        lib.remove(a.name, force_deps=getattr(a, 'force', False))
     elif a.cmd == "conflicts":
         conflicts = lib.conflicts_report()
         for f, ns in conflicts.items():

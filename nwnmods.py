@@ -816,6 +816,7 @@ class Library:
                 self.d.update(json.loads(self.mf.read_text(encoding="utf-8")))
             except Exception as e:  # noqa: BLE001
                 sys.stderr.write(f"nwnmods: could not read manifest {self.mf}: {e!r}\n")
+        self._migrate()
 
     @property
     def mods(self) -> dict:
@@ -1016,20 +1017,22 @@ class Library:
                 shutil.move(str(sp), str(tgt))
             self._prune(rel)
 
-    def disable(self, name):
+    def disable(self, name, force_deps=False):
         m = self._get(name)
         if not m["enabled"]:
             return
+        self.check_dependents_for_disable(name, force=force_deps)
         self._undeploy(name, keep=self.base / "disabled" / name)
         self._relink(name)
         m["enabled"], m["stash"] = False, {}
         shutil.rmtree(self.base / "stash" / name, ignore_errors=True)
         self.save()
 
-    def enable(self, name, on_conflict=None):
+    def enable(self, name, on_conflict=None, force_deps=False):
         m = self._get(name)
         if m["enabled"]:
             return
+        self.check_deps_for_enable(name, force=force_deps)
         d = self.base / "disabled" / name
         items = [(f, f.relative_to(d)) for f in sorted(d.rglob("*")) if f.is_file()] if d.exists() else []
         if not items:
@@ -1044,9 +1047,10 @@ class Library:
         shutil.rmtree(d, ignore_errors=True)
         self.save()
 
-    def remove(self, name):
+    def remove(self, name, force_deps=False):
         m = self._get(name)
         if m["enabled"]:
+            self.check_dependents_for_disable(name, force=force_deps)
             self._undeploy(name)
         shutil.rmtree(self.base / "disabled" / name, ignore_errors=True)
         self._relink(name)
@@ -1077,6 +1081,54 @@ class Library:
         if name not in self.mods:
             raise Err(f"'{name}' is not registered.")
         return self.mods[name]
+
+
+    def _migrate(self):
+        for name, m in (self.d.get("mods") or {}).items():
+            m.setdefault("requires", [])
+            m.setdefault("dependents", [])
+            m.setdefault("notes", "")
+            m.setdefault("rating", 0)
+            m.setdefault("vault_url", "")
+            m.setdefault("author", "")
+            m.setdefault("version", "")
+
+
+    def requires(self, name):
+        return list(self.mods[name].get("requires", [])) if name in self.mods else []
+
+    def set_requires(self, name, requires):
+        m = self._get(name)
+        m["requires"] = [r for r in (requires or []) if r]
+        self.save()
+
+    def dependents(self, name):
+        return [n for n, m in self.mods.items() if name in (m.get("requires") or [])]
+
+    def missing_deps(self, name):
+        reqs = self.requires(name)
+        missing = []
+        for r in reqs:
+            if r not in self.mods:
+                missing.append((r, "missing"))
+            elif not self.mods[r].get("enabled", False):
+                missing.append((r, "disabled"))
+        return missing
+
+    def check_deps_for_enable(self, name, force=False):
+        md = self.missing_deps(name)
+        if md and not force:
+            raise Err("Missing/disabled dependencies for '{}': {}".format(
+                name, ", ".join(f"{r} ({s})" for r, s in md)))
+        # reverse: others depend on it? only relevant for disable/remove
+        return md
+
+    def check_dependents_for_disable(self, name, force=False):
+        deps = self.dependents(name)
+        active_deps = [d for d in deps if self.mods[d].get("enabled", False)]
+        if active_deps and not force:
+            raise Err("'{}' is required by active mods: {}".format(name, ", ".join(active_deps)))
+        return active_deps
 
     def conflicts_report(self) -> dict:
         seen = {}
@@ -1844,7 +1896,17 @@ def run_gui(initial_user=None):
         def show_files(self):
             for n in self.selected()[:1]:
                 m = self.lib.mods[n]
-                self._text_window(f"{n} — {len(m['files'])} files", "\n".join(m["files"]))
+                lines = []
+                req = m.get("requires") or []
+                if req:
+                    lines.append("Requires: " + ", ".join(req))
+                if m.get("notes"):
+                    lines.append("Notes: " + m["notes"])
+                if m.get("rating"):
+                    lines.append("Rating: " + str(m["rating"]))
+                lines.append("")
+                lines += m["files"]
+                self._text_window(f"{n} - {len(m['files'])} files", "\n".join(lines))
 
         def show_conflicts(self):
             if not self._need_lib():

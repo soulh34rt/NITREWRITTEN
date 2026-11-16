@@ -243,3 +243,26 @@ def test_saves_switch_never_deletes(lib, user_dir):
     stash = user_dir / ".nwnmods" / "saves" / "_default" / "saves" / "a.sav"
     assert stash.exists()
     assert stash.read_bytes() == b"hello"
+
+
+def test_dependencies_block_enable(lib, tmp_path):
+    z1 = tmp_path / "base.zip"
+    z2 = tmp_path / "child.zip"
+    import zipfile
+    with zipfile.ZipFile(z1, "w") as z:
+        z.writestr("hak/base.hak", b"b")
+    with zipfile.ZipFile(z2, "w") as z:
+        z.writestr("hak/child.hak", b"c")
+    lib.install(z1, name="base")
+    lib.install(z2, name="child")
+    lib.set_requires("child", ["base"])
+    assert lib.requires("child") == ["base"]
+    # base disabled -> enabling child should warn
+    lib.disable("base", force_deps=True)
+    import pytest
+    lib.disable("child")
+    with pytest.raises(Exception):
+        lib.enable("child")
+    # force works
+    lib.enable("child", force_deps=True)
+    assert lib.mods["child"]["enabled"] is True
