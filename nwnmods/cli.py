@@ -43,6 +43,10 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    ex = sp.add_parser("export"); ex.add_argument("name"); ex.add_argument("dest")
+    im = sp.add_parser("import"); im.add_argument("file"); im.add_argument("--name")
+    ep = sp.add_parser("export-profile"); ep.add_argument("name"); ep.add_argument("dest")
+    ip = sp.add_parser("import-profile"); ip.add_argument("file"); ip.add_argument("--name")
     em = sp.add_parser("extmap"); ems = em.add_subparsers(dest="em_cmd")
     ems.add_parser("show"); ems.add_parser("reset")
     ws = sp.add_parser("workshop"); wsv = ws.add_subparsers(dest="ws_cmd")
@@ -187,6 +191,14 @@ def cli(argv):
             print("ext_map:", cfg.get("ext_map"))
             print("ignore_ext:", cfg.get("ignore_ext"))
             print("ignore_names:", cfg.get("ignore_names"))
+    elif a.cmd == "export":
+        p = lib.export_mod(a.name, a.dest); print(f"[OK] exported: {p}")
+    elif a.cmd == "import":
+        n = lib.import_mod(a.file, a.name); print(f"[OK] imported: {n}")
+    elif a.cmd == "export-profile":
+        p = lib.export_profile(a.name, a.dest); print(f"[OK] exported profile: {p}")
+    elif a.cmd == "import-profile":
+        n = lib.import_profile(a.file, a.name); print(f"[OK] imported profile: {n}")
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":

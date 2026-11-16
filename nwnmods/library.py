@@ -583,6 +583,94 @@ class Library:
             converted.append(wbm)
         return converted
 
+
+    def export_mod(self, name, dest):
+        m = self._get(name)
+        dest = Path(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
+            # metadata
+            meta = {
+                "name": name,
+                "files": m.get("files", []),
+                "requires": m.get("requires", []),
+                "notes": m.get("notes", ""),
+                "rating": m.get("rating", 0),
+                "vault_url": m.get("vault_url", ""),
+                "author": m.get("author", ""),
+                "version": m.get("version", ""),
+                "group": m.get("group", ""),
+            }
+            z.writestr("mod.json", json.dumps(meta, indent=2, ensure_ascii=False))
+            for rel in m.get("files", []):
+                src = self.user / rel
+                if src.is_file():
+                    z.write(src, "files/" + rel)
+        return dest
+
+    def import_mod(self, zpath, name=None):
+        zpath = Path(zpath)
+        with zipfile.ZipFile(zpath) as z:
+            meta = json.loads(z.read("mod.json").decode("utf-8"))
+            mod_name = name or meta.get("name")
+            if not mod_name:
+                raise Err("Mod name missing in archive.")
+            if mod_name in self.mods:
+                raise Err(f"'{mod_name}' is already installed.")
+            # extract files
+            for info in z.infolist():
+                if info.filename.startswith("files/"):
+                    rel = info.filename[len("files/"):]
+                    if not _inside(self.user, rel):
+                        raise Err("Archive contains insecure paths.")
+            for info in z.infolist():
+                if info.filename.startswith("files/"):
+                    rel = info.filename[len("files/"):]
+                    tgt = self.user / rel
+                    tgt.parent.mkdir(parents=True, exist_ok=True)
+                    with z.open(info) as srcf, open(tgt, "wb") as dstf:
+                        shutil.copyfileobj(srcf, dstf)
+            files = meta.get("files", [])
+            # ensure files list matches extracted
+            if not files:
+                files = [i.filename[len("files/"):] for i in z.infolist() if i.filename.startswith("files/") and not i.is_dir()]
+            self.mods[mod_name] = {
+                "files": files,
+                "stash": {},
+                "enabled": True,
+                "date": datetime.now().isoformat(timespec="seconds"),
+                "source": str(zpath),
+                "requires": meta.get("requires", []),
+                "notes": meta.get("notes", ""),
+                "rating": meta.get("rating", 0),
+                "vault_url": meta.get("vault_url", ""),
+                "author": meta.get("author", ""),
+                "version": meta.get("version", ""),
+                "group": meta.get("group", ""),
+            }
+            self.save()
+            return mod_name
+
+    def export_profile(self, name, dest):
+        if name not in self.d.get("profiles", {}):
+            raise Err(f"Profile '{name}' not found.")
+        dest = Path(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        data = {"profile": name, "mods": self.d["profiles"][name]}
+        dest.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return dest
+
+    def import_profile(self, src, name=None):
+        src = Path(src)
+        data = json.loads(src.read_text(encoding="utf-8"))
+        pname = name or data.get("profile")
+        if not pname:
+            raise Err("Profile name missing.")
+        self.d.setdefault("profiles", {})
+        self.d["profiles"][pname] = data.get("mods", [])
+        self.save()
+        return pname
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
