@@ -140,7 +140,7 @@ class Game:
 
     @property
     def label(self) -> str:
-        where = str(self.root) if self.root else "(solo carpeta de usuario)"
+        where = str(self.root) if self.root else "(user folder only)"
         return f"{self.edition} · {self.store} · {where}"
 
 
@@ -194,7 +194,7 @@ def steam_libraries():
 
 
 def other_bases():
-    """(tienda, carpeta base, profundidad de busqueda)."""
+    """(store, root folder, search depth)."""
     h = Path.home()
     pfs = [Path(os.environ[v]) for v in ("ProgramFiles", "ProgramFiles(x86)") if os.environ.get(v)]
     drives = [Path(f"{c}:/") for c in "CDEFGH" if Path(f"{c}:/").exists()] if SYS == "Windows" else []
@@ -203,7 +203,7 @@ def other_bases():
     out += [("GOG", d / "GOG Games", 1) for d in drives]
     out += [("GOG", p / "GOG Galaxy/Games", 1) for p in pfs]
     out += [("GOG", h / "GOG Games", 1), ("GOG", h / "Games", 2), ("GOG", h / "Games/gog", 1)]
-    # Beamdog (carpetas con ID numerico)
+    # Beamdog (folders with numeric ID)
     out += [("Beamdog", d / "Beamdog Library", 1) for d in drives]
     out += [("Beamdog", h / "Beamdog Library", 1), ("Beamdog", documents_dir() / "Beamdog Library", 1)]
     out += [("Beamdog", p / "Beamdog", 2) for p in pfs]
@@ -257,7 +257,7 @@ def detect_all(cfg=None) -> list:
         if ov:
             g.user = Path(ov)
     if not games and ee_user_dir().exists():
-        games.append(Game(None, "EE", "carpeta de usuario"))
+        games.append(Game(None, "EE", "user folder"))
     return games
 
 
@@ -279,18 +279,18 @@ def launch(game: Game):
         open_path(f"steam://rungameid/{STEAM_APPID_EE}")
         return
     if not game.root:
-        raise Err("No hay carpeta de instalacion para iniciar el juego.")
+        raise Err("No installation folder found to launch the game.")
     cands = sorted(game.root.glob("bin/*/nwmain*")) if game.edition == "EE" else [game.root / "nwmain.exe"]
     exe = next((c for c in cands if c.is_file() and c.suffix.lower() not in (".so", ".pdb", ".dll")), None)
     if not exe:
-        raise Err("No encontre el ejecutable del juego.")
+        raise Err("Could not find the game executable.")
     cmd = [str(exe)]
     if SYS != "Windows" and exe.suffix.lower() == ".exe":
         cmd = ["wine"] + cmd
     subprocess.Popen(cmd, cwd=str(exe.parent))
 
 
-# --------------------------------------------------------------------------- archivos
+# --------------------------------------------------------------------------- files
 KNOWN = {"hak", "tlk", "modules", "override", "nwm", "erf", "portraits", "music", "ambient", "movies",
          "saves", "localvault", "servervault", "dmvault", "campaigns", "database", "streamwaves"}
 LOWER_DIRS = {"hak", "tlk", "override", "portraits", "music", "ambient"}
@@ -339,14 +339,14 @@ def extract(src: Path, out: Path):
         with zipfile.ZipFile(src) as z:
             for m in z.infolist():
                 if not _inside(out, m.filename):
-                    raise Err("El archivo contiene rutas inseguras.")
+                    raise Err("Archive contains insecure paths.")
             z.extractall(out)
         return
     if tarfile.is_tarfile(src):
         with tarfile.open(src) as t:
             for m in t.getmembers():
                 if not _inside(out, m.name):
-                    raise Err("El archivo contiene rutas inseguras.")
+                    raise Err("Archive contains insecure paths.")
             try:
                 t.extractall(out, filter="data")
             except TypeError:
@@ -377,7 +377,7 @@ def extract(src: Path, out: Path):
     if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
         shutil.copy2(src, out / src.name)
         return
-    raise Err("No pude abrir el archivo. Para .7z/.rar instala 7-Zip (7z) o py7zr.")
+    raise Err("Could not open archive. For .7z/.rar install 7-Zip (7z) or py7zr.")
 
 
 def download(url: str, dest_dir: Path, referer=None, fallback=None) -> Path:
@@ -386,7 +386,7 @@ def download(url: str, dest_dir: Path, referer=None, fallback=None) -> Path:
         headers["Referer"] = referer
     with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=90) as r:
         if r.headers.get("Content-Type", "").lower().startswith("text/html"):
-            raise Err("El sitio no devolvio un archivo (¿requiere iniciar sesion o cambio el enlace?).")
+            raise Err("The site did not return a file (check your connection or login).")
         name = None
         m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)', r.headers.get("Content-Disposition", ""))
         if m:
@@ -495,7 +495,7 @@ def vault_catalog(game: str, force=False) -> list:
         items += got
     items = list({i["url"]: i for i in items}.values())
     if not items:
-        raise Err("No pude leer el catalogo del Vault (¿sin conexion o cambio el sitio?).")
+        raise Err("Could not read Vault catalog (offline or site changed?).")
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
     return items
@@ -583,7 +583,7 @@ def parse_project(html: str, url: str) -> dict:
 
 # --------------------------------------------------------------------------- biblioteca
 class Library:
-    """Registro de mods de una carpeta de usuario (.nwnmods/manifest.json)."""
+    """Mod registry for a user folder (.nwnmods/manifest.json)."""
 
     def __init__(self, user):
         self.user = Path(user)
@@ -608,6 +608,23 @@ class Library:
 
     def owners(self) -> dict:
         return {f: n for n, m in self.mods.items() if m["enabled"] for f in m["files"]}
+
+    def cleanup(self) -> int:
+        """Deletes files in content directories that are not managed by any active mod."""
+        owners, count = self.owners(), 0
+        for sub in CONTENT_DIRS:
+            d = self.user / sub
+            if not d.is_dir(): continue
+            for f in sorted(d.rglob("*"), reverse=True):
+                if f.is_file():
+                    key = f.relative_to(self.user).as_posix()
+                    if key not in owners:
+                        f.unlink()
+                        count += 1
+                elif f.is_dir():
+                    try: f.rmdir()
+                    except OSError: pass
+        return count
 
     def _prune(self, rel: Path):
         p = (self.user / rel).parent
@@ -636,7 +653,7 @@ class Library:
 
     def _conflicts(self, items):
         owners = self.owners()
-        return [(r.as_posix(), owners.get(r.as_posix()) or "(archivo existente)")
+        return [(r.as_posix(), owners.get(r.as_posix()) or "(existing file)")
                 for _, r in items if (self.user / r).exists()]
 
     def install(self, archive, name=None, lowercase=True, on_conflict=None, source=None) -> str:
@@ -646,7 +663,7 @@ class Library:
         if not name:
             name = archive.name if archive.is_dir() else re.sub(r"\.(tar\.\w+|\w+)$", "", archive.name)
         if name in self.mods:
-            raise Err(f"'{name}' ya esta instalado.")
+            raise Err(f"'{name}' is already installed.")
         self.user.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as t:
             t = Path(t)
@@ -657,16 +674,16 @@ class Library:
                 if rel:
                     items.append((f, rel))
             if not items:
-                raise Err("El archivo no contiene nada instalable.")
+                raise Err("Archive does not contain anything installable.")
             conflicts = self._conflicts(items)
             action = "overwrite"
             if conflicts:
                 action = on_conflict(conflicts) if on_conflict else "skip"
                 if action == "cancel":
-                    raise Err("Instalacion cancelada.")
+                    raise Err("Installation canceled.")
             files, stash = self._deploy(name, items, action, self.owners())
         if not files:
-            raise Err("No se instalo nada (todo existia ya).")
+            raise Err("Nothing was installed (everything already existed).")
         self.mods[name] = {"files": files, "stash": stash, "enabled": True,
                            "date": datetime.now().isoformat(timespec="seconds"), "source": source or str(archive)}
         self.save()
@@ -715,12 +732,12 @@ class Library:
         d = self.base / "disabled" / name
         items = [(f, f.relative_to(d)) for f in sorted(d.rglob("*")) if f.is_file()] if d.exists() else []
         if not items:
-            raise Err("No quedan archivos guardados de este mod.")
+            raise Err("No stashed files left for this mod.")
         conflicts = self._conflicts(items)
         if conflicts:
             action = on_conflict(conflicts) if on_conflict else "cancel"
             if action != "overwrite":
-                raise Err("Activacion cancelada por conflictos.")
+                raise Err("Activation canceled due to conflicts.")
         files, stash = self._deploy(name, items, "overwrite", self.owners())
         m.update(files=files, stash=stash, enabled=True)
         shutil.rmtree(d, ignore_errors=True)
@@ -737,7 +754,7 @@ class Library:
         self.save()
 
     def _relink(self, name):
-        """Otro mod Y sobrescribio archivos de 'name': Y hereda lo que 'name' tenia guardado debajo."""
+        """Another mod Y overwrote files from 'name': Y inherits what 'name' had stashed underneath."""
         m = self.mods[name]
         for n, o in self.mods.items():
             if n == name:
@@ -757,7 +774,7 @@ class Library:
 
     def _get(self, name):
         if name not in self.mods:
-            raise Err(f"'{name}' no esta registrado.")
+            raise Err(f"'{name}' is not registered.")
         return self.mods[name]
 
     def conflicts_report(self) -> dict:
@@ -777,7 +794,8 @@ class Library:
             for f in sorted(d.rglob("*")):
                 if f.is_file():
                     key = f.relative_to(self.user).as_posix()
-                    rows.append((sub, key, f.stat().st_size, owners.get(key, "—")))
+                    owner = owners.get(key, "(unmanaged/vanilla)")
+                    rows.append((sub, key, f.stat().st_size, owner))
         return rows
 
     # perfiles
@@ -807,7 +825,7 @@ class Library:
                         n += 1
         if not n:
             dest.unlink()
-            raise Err("No hay guardados ni personajes que respaldar.")
+            raise Err("No saves or characters to backup.")
         return dest
 
     def backups(self):
@@ -827,11 +845,12 @@ def run_gui(initial_user=None):
     class App(tk.Tk):
         def __init__(self):
             super().__init__()
-            self.title("NWN Mod Manager - Profesional")
-            self.geometry("1100x700")
-            self.minsize(900, 600)
+            self.title("NITREWRITTEN - Professional NWN Mod Manager")
+            self.geometry("1100x750")
+            self.minsize(900, 650)
             
             style = ttk.Style()
+            # Modern dark/light hybrid theme configuration
             if SYS == "Windows":
                 style.theme_use("vista")
             elif SYS == "Darwin":
@@ -839,42 +858,84 @@ def run_gui(initial_user=None):
             else:
                 style.theme_use("clam")
                 
-            # Configuracion de colores y fuentes
-            style.configure("TFrame", background="#f0f0f0")
-            style.configure("TLabel", background="#f0f0f0", font=("Segoe UI", 10))
+            # Professional color palette
+            style.configure("TFrame", background="#ffffff")
+            style.configure("TLabel", background="#ffffff", font=("Segoe UI", 10))
             style.configure("TButton", font=("Segoe UI", 9))
-            style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"), foreground="#2c3e50")
-            style.configure("Treeview", font=("Segoe UI", 9), rowheight=25)
+            style.configure("Header.TLabel", font=("Segoe UI", 13, "bold"), foreground="#1a73e8", background="#ffffff")
+            style.configure("Treeview", font=("Segoe UI", 9), rowheight=28)
             style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+            style.map("TButton", background=[("active", "#e8f0fe")], foreground=[("active", "#1a73e8")])
+            
             self.cfg = load_cfg()
             self.games, self.game, self.lib = [], None, None
             self.vault_items, self.vault_info, self.vault_sel = [], {}, None
             self.vault_shown, self.vault_busy, self.vault_sort, self._img = [], False, ("posted", True), None
+            self.v_dark = tk.BooleanVar(value=self.cfg.get("dark_mode", False))
             self.v_lower = tk.BooleanVar(value=self.cfg["lowercase"])
             self.v_policy = tk.StringVar(value=self.cfg["policy"])
             self._build()
+            self._apply_theme()
             self.after(100, lambda: self.detect(initial_user))
+
+        def _apply_theme(self):
+            dark = self.v_dark.get()
+            bg = "#1e1e1e" if dark else "#ffffff"
+            fg = "#e0e0e0" if dark else "#000000"
+            header_fg = "#4daafc" if dark else "#1a73e8"
+            btn_active = "#333333" if dark else "#e8f0fe"
+            tree_bg = "#2d2d2d" if dark else "#ffffff"
+            tree_fg = "#ffffff" if dark else "#000000"
+            
+            style = ttk.Style()
+            style.configure("TFrame", background=bg)
+            style.configure("TLabel", background=bg, foreground=fg)
+            style.configure("Header.TLabel", background=bg, foreground=header_fg)
+            style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg)
+            style.configure("Treeview.Heading", background="#333333" if dark else "#f0f0f0", 
+                            foreground="#ffffff" if dark else "#000000")
+            style.map("TButton", background=[("active", btn_active)], foreground=[("active", header_fg)])
+            
+            self.configure(background=bg)
+            if hasattr(self, "logbox"):
+                self.logbox.configure(background="#121212" if dark else "#f8f9fa", 
+                                      foreground="#a0a0a0" if dark else "#333")
+            if hasattr(self, "v_det"):
+                self.v_det.configure(background="#121212" if dark else "#f8f9fa", 
+                                     foreground="#eee" if dark else "#000")
+            if hasattr(self, "lb_prof"):
+                self.lb_prof.configure(background=tree_bg, foreground=tree_fg)
+            if hasattr(self, "lb_bak"):
+                self.lb_bak.configure(background=tree_bg, foreground=tree_fg)
+            if hasattr(self, "lb_vfiles"):
+                self.lb_vfiles.configure(background=tree_bg, foreground=tree_fg)
 
         # ---- construccion
         def _build(self):
-            self.configure(background="#f0f0f0")
-            top = ttk.Frame(self, padding=8)
+            self.configure(background="#ffffff")
+            top = ttk.Frame(self, padding=(15, 10))
             top.pack(fill="x")
-            ttk.Label(top, text="Instalación de NWN:", style="Header.TLabel").pack(side="left", padx=(0, 10))
-            self.combo = ttk.Combobox(top, state="readonly", width=60)
-            self.combo.pack(side="left", padx=6, fill="x", expand=True)
+            
+            ttk.Label(top, text="NWN Installation:", style="Header.TLabel").pack(side="left", padx=(0, 10))
+            self.combo = ttk.Combobox(top, state="readonly", width=50)
+            self.combo.pack(side="left", padx=5, fill="x", expand=True)
             self.combo.bind("<<ComboboxSelected>>", lambda e: self.set_game(self.combo.current()))
             
             btn_frame = ttk.Frame(top)
             btn_frame.pack(side="left", padx=5)
-            for txt, fn in (("Detect", self.detect), ("Add folder…", self.add_folder),
-                            ("Open data", lambda: self.game and open_path(self.game.user)),
-                            ("▶ Play", self.play)):
+            for txt, fn in (("Scan", self.detect), ("Add...", self.add_folder),
+                            ("Folder", lambda: self.game and open_path(self.game.user)),
+                            ("▶ Launch Game", self.play)):
                 ttk.Button(btn_frame, text=txt, command=fn).pack(side="left", padx=2)
-            self.info = ttk.Label(self, padding=(10, 0), foreground="#555")
+            
+            self.info = ttk.Label(self, padding=(15, 5), foreground="#666", font=("Segoe UI", 9))
             self.info.pack(fill="x")
+            
+            # Main content separator
+            ttk.Separator(self, orient="horizontal").pack(fill="x", padx=15, pady=5)
+            
             nb = ttk.Notebook(self)
-            nb.pack(fill="both", expand=True, padx=8, pady=8)
+            nb.pack(fill="both", expand=True, padx=15, pady=(5, 15))
             self.nb = nb
             self.tab_mods, self.tab_cont, self.tab_vault = ttk.Frame(nb), ttk.Frame(nb), ttk.Frame(nb)
             self.tab_prof, self.tab_bak = ttk.Frame(nb), ttk.Frame(nb)
@@ -914,62 +975,84 @@ def run_gui(initial_user=None):
 
         def _build_mods(self):
             p = self.tab_mods
-            self._btns(p, (("Instalar archivo(s)…", self.install_files), ("Instalar carpeta…", self.install_dir),
-                           ("Instalar desde URL…", self.install_url), ("Activar", self.enable),
-                           ("Desactivar", self.disable), ("Desinstalar", self.remove),
-                           ("Ver archivos", self.show_files), ("Conflictos", self.show_conflicts)))
+            self._btns(p, (("Install Files...", self.install_files), ("Install Folder...", self.install_dir),
+                           ("Install URL...", self.install_url), ("Enable", self.enable),
+                           ("Disable", self.disable), ("Uninstall", self.remove),
+                           ("View Files", self.show_files), ("Conflicts", self.show_conflicts)))
+            
+            filter_frame = ttk.Frame(p)
+            filter_frame.pack(fill="x", pady=(0, 8))
+            ttk.Label(filter_frame, text="Search: ", foreground="#888").pack(side="left")
             self.q_mods = tk.StringVar()
-            e = ttk.Entry(p, textvariable=self.q_mods)
-            e.pack(fill="x", pady=(0, 6))
+            e = ttk.Entry(filter_frame, textvariable=self.q_mods)
+            e.pack(side="left", fill="x", expand=True)
             self.q_mods.trace_add("write", lambda *a: self.refresh_mods())
-            self.tv_mods = self._tree(p, ("nombre", "estado", "archivos", "fecha", "origen"),
+            
+            self.tv_mods = self._tree(p, ("name", "status", "files", "date", "source"),
                                       (260, 100, 80, 100, 380))
+            for c in ("name", "status", "files", "date", "source"):
+                self.tv_mods.heading(c, text=c.title())
 
         def _build_content(self):
             p = self.tab_cont
             f = ttk.Frame(p)
-            f.pack(fill="x", pady=(0, 6))
-            self.cat = ttk.Combobox(f, state="readonly", values=["(todo)"] + CONTENT_DIRS, width=16)
+            f.pack(fill="x", pady=(0, 8))
+            self.cat = ttk.Combobox(f, state="readonly", values=["(all)"] + CONTENT_DIRS, width=16)
             self.cat.current(0)
             self.cat.pack(side="left")
             self.cat.bind("<<ComboboxSelected>>", lambda e: self.refresh_content())
+            
             self.q_cont = tk.StringVar()
-            ttk.Entry(f, textvariable=self.q_cont).pack(side="left", fill="x", expand=True, padx=6)
+            e = ttk.Entry(f, textvariable=self.q_cont)
+            e.pack(side="left", fill="x", expand=True, padx=8)
             self.q_cont.trace_add("write", lambda *a: self.refresh_content())
-            self.lbl_cont = ttk.Label(f)
+            
+            ttk.Button(f, text="Clean Up", command=self.do_cleanup).pack(side="left", padx=2)
+            
+            self.lbl_cont = ttk.Label(f, foreground="#888")
             self.lbl_cont.pack(side="left")
-            self.tv_cont = self._tree(p, ("carpeta", "archivo", "tamaño", "mod"), (110, 520, 90, 220))
+            self.tv_cont = self._tree(p, ("folder", "file", "size", "mod"), (110, 520, 90, 220))
+            for c in ("folder", "file", "size", "mod"):
+                self.tv_cont.heading(c, text=c.title())
 
         def _build_profiles(self):
             p = self.tab_prof
-            ttk.Label(p, text="Un perfil recuerda qué mods están activos y los cambia de un clic.",
-                      foreground="#555").pack(anchor="w", pady=(0, 6))
-            self._btns(p, (("Guardar perfil actual…", self.prof_save), ("Aplicar", self.prof_apply),
-                           ("Borrar", self.prof_del)))
-            self.lb_prof = tk.Listbox(p)
-            self.lb_prof.pack(fill="both", expand=True)
+            ttk.Label(p, text="Profiles allow you to save and switch between different sets of active mods.",
+                      foreground="#666").pack(anchor="w", pady=(5, 10))
+            self._btns(p, (("Save Current Profile...", self.prof_save), ("Apply Selected", self.prof_apply),
+                           ("Delete Profile", self.prof_del)))
+            self.lb_prof = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid")
+            self.lb_prof.pack(fill="both", expand=True, pady=5)
 
         def _build_backups(self):
             p = self.tab_bak
-            ttk.Label(p, text="Copias de guardados y personajes (saves, localvault, servervault, dmvault).",
-                      foreground="#555").pack(anchor="w", pady=(0, 6))
-            self._btns(p, (("Crear copia", self.bak_make), ("Restaurar seleccionada", self.bak_restore),
-                           ("Abrir carpeta", lambda: self.lib and open_path(self.lib.base / "backups"))))
-            self.lb_bak = tk.Listbox(p)
-            self.lb_bak.pack(fill="both", expand=True)
+            ttk.Label(p, text="Manage backups of your save games and characters.",
+                      foreground="#666").pack(anchor="w", pady=(5, 10))
+            self._btns(p, (("Create New Backup", self.bak_make), ("Restore Selected", self.bak_restore),
+                           ("Open Backups Folder", lambda: self.lib and open_path(self.lib.base / "backups"))))
+            self.lb_bak = tk.Listbox(p, font=("Segoe UI", 10), borderwidth=1, relief="solid")
+            self.lb_bak.pack(fill="both", expand=True, pady=5)
 
         def _build_settings(self):
             p = self.tab_set
-            ttk.Checkbutton(p, text="Nombres en minúsculas para hak/tlk/override (recomendado en Linux)",
-                            variable=self.v_lower, command=self.save_settings).pack(anchor="w", pady=4)
-            ttk.Label(p, text="Cuando un archivo ya existe al instalar:").pack(anchor="w", pady=(10, 0))
-            for v, t in (("ask", "Preguntar"), ("overwrite", "Sobrescribir (se guarda copia y se restaura al desinstalar)"),
-                         ("skip", "Omitir esos archivos")):
+            ttk.Checkbutton(p, text="Dark Mode",
+                            variable=self.v_dark, command=self.save_settings).pack(anchor="w", pady=8)
+            
+            ttk.Checkbutton(p, text="Lowercase file names for hak/tlk/override (Recommended for Linux)",
+                            variable=self.v_lower, command=self.save_settings).pack(anchor="w", pady=8)
+            
+            ttk.Label(p, text="When a file already exists during installation:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(15, 5))
+            for v, t in (("ask", "Ask every time"), 
+                         ("overwrite", "Overwrite (Backup will be created and restored on uninstall)"),
+                         ("skip", "Skip existing files")):
                 ttk.Radiobutton(p, text=t, value=v, variable=self.v_policy,
-                                command=self.save_settings).pack(anchor="w", padx=16)
-            ttk.Button(p, text="Cambiar carpeta de datos del juego seleccionado…",
-                       command=self.change_user).pack(anchor="w", pady=14)
-            ttk.Label(p, text=f"Configuración: {CFG}", foreground="#555").pack(anchor="w")
+                                command=self.save_settings).pack(anchor="w", padx=20, pady=2)
+            
+            ttk.Separator(p, orient="horizontal").pack(fill="x", pady=20)
+            
+            ttk.Button(p, text="Change Game Data Folder...",
+                       command=self.change_user).pack(anchor="w", pady=5)
+            ttk.Label(p, text=f"Config location: {CFG}", foreground="#888", font=("Segoe UI", 8)).pack(anchor="w", pady=5)
 
         # ---- utilidades
         def log(self, msg):
@@ -988,37 +1071,39 @@ def run_gui(initial_user=None):
                 self.log(f"✘ {e}")
                 messagebox.showerror("NWN Mod Manager", str(e))
             except Exception as e:  # noqa: BLE001
-                self.log(f"✘ Error inesperado: {e!r}")
-                messagebox.showerror("Error inesperado", repr(e))
+                self.log(f"✘ Unexpected error: {e!r}")
+                messagebox.showerror("Unexpected error", repr(e))
             finally:
                 self.configure(cursor="")
 
         def save_settings(self):
             self.cfg["lowercase"], self.cfg["policy"] = self.v_lower.get(), self.v_policy.get()
+            self.cfg["dark_mode"] = self.v_dark.get()
             save_cfg(self.cfg)
+            self._apply_theme()
 
         def ask_conflict(self, conf):
             pol = self.v_policy.get()
             if pol in ("overwrite", "skip"):
                 return pol
             lines = "\n".join(f"• {r}  ←  {o}" for r, o in conf[:12])
-            more = f"\n… y {len(conf) - 12} más" if len(conf) > 12 else ""
+            more = f"\n… and {len(conf) - 12} more" if len(conf) > 12 else ""
             r = messagebox.askyesnocancel(
-                "Archivos en conflicto",
-                f"{len(conf)} archivo(s) ya existen:\n\n{lines}{more}\n\nSí = sobrescribir (con copia de respaldo)\n"
-                "No = omitirlos\nCancelar = abortar")
+                "File Conflicts",
+                f"{len(conf)} file(s) already exist:\n\n{lines}{more}\n\nYes = Overwrite (with backup)\n"
+                "No = Skip them\nCancel = Abort installation")
             return "overwrite" if r else ("skip" if r is False else "cancel")
 
         # ---- instalaciones
         def detect(self, initial_user=None):
             self.games = self.guard(detect_all, self.cfg) or []
             if isinstance(initial_user, (str, Path)):
-                self.games.insert(0, Game(initial_user, "Personalizada", "manual", initial_user))
+                self.games.insert(0, Game(initial_user, "Custom", "manual", initial_user))
             self.combo["values"] = [g.label for g in self.games]
-            self.log(f"Instalaciones detectadas: {len(self.games)}")
+            self.log(f"Installations detected: {len(self.games)}")
             if not self.games:
                 self.game = self.lib = None
-                self.info.configure(text="No encontré ninguna instalación. Usa «Agregar carpeta…».")
+                self.info.configure(text="No installations found. Use 'Add...' to manually locate your game folder.")
                 self.refresh_all()
                 return
             last = self.cfg.get("last")
@@ -1027,16 +1112,16 @@ def run_gui(initial_user=None):
             self.set_game(idx)
 
         def add_folder(self):
-            d = filedialog.askdirectory(title="Carpeta de instalación (o de datos) de Neverwinter Nights")
+            d = filedialog.askdirectory(title="NWN Installation or Data Folder")
             if not d:
                 return
             ed = classify(Path(d))
             if ed:
                 self.cfg["manual"].append({"root": d, "edition": ed})
-            elif messagebox.askyesno("Carpeta desconocida",
-                                     "No parece una instalación de NWN. ¿Usarla como carpeta de datos "
-                                     "(donde van hak, override, modules…)?"):
-                self.cfg["manual"].append({"root": d, "edition": "Personalizada", "user": d})
+            elif messagebox.askyesno("Unknown Folder",
+                                     "This doesn't look like a standard NWN installation. Use it as a data folder "
+                                     "(where hak, override, modules... are located)?"):
+                self.cfg["manual"].append({"root": d, "edition": "Custom", "user": d})
             else:
                 return
             save_cfg(self.cfg)
@@ -1047,7 +1132,7 @@ def run_gui(initial_user=None):
             self.lib = Library(self.game.user)
             self.cfg["last"] = str(self.game.root)
             save_cfg(self.cfg)
-            self.info.configure(text=f"Datos del juego: {self.game.user}")
+            self.info.configure(text=f"Game data: {self.game.user}")
             want = "NWN 1" if self.game.edition == "Diamond" else "NWN:EE"
             if not self.vault_items:
                 self.v_game.set(want)
@@ -1056,7 +1141,7 @@ def run_gui(initial_user=None):
         def change_user(self):
             if not self.game:
                 return
-            d = filedialog.askdirectory(title="Carpeta de datos (hak, override, modules…)")
+            d = filedialog.askdirectory(title="Select Game Data Folder (hak, override, modules...)")
             if d:
                 self.cfg["user_override"][str(self.game.root)] = d
                 save_cfg(self.cfg)
@@ -1082,7 +1167,7 @@ def run_gui(initial_user=None):
             for n, m in self.lib.mods.items():
                 if q in n.lower():
                     self.tv_mods.insert("", "end", iid=n, values=(
-                        n, "Activo" if m["enabled"] else "Desactivado", len(m["files"]),
+                        n, "Active" if m["enabled"] else "Disabled", len(m["files"]),
                         m["date"][:10], m["source"] if m["source"].startswith("http") else Path(m["source"]).name))
 
         def refresh_content(self):
@@ -1091,12 +1176,12 @@ def run_gui(initial_user=None):
             if not self.lib:
                 return
             cat = self.cat.get()
-            rows = self.lib.scan(None if cat == "(todo)" else cat)
+            rows = self.lib.scan(None if cat == "(all)" else cat)
             q = self.q_cont.get().lower()
             shown = [r for r in rows if q in r[1].lower() or q in r[3].lower()]
             for sub, key, size, owner in shown[:5000]:
                 self.tv_cont.insert("", "end", values=(sub, key, f"{size / 1024:,.0f} KB", owner))
-            self.lbl_cont.configure(text=f"{len(shown)} archivos" + (" (mostrando 5000)" if len(shown) > 5000 else ""))
+            self.lbl_cont.configure(text=f"{len(shown)} files" + (" (showing 5000)" if len(shown) > 5000 else ""))
 
         def refresh_profiles(self):
             self.lb_prof.delete(0, "end")
@@ -1114,73 +1199,73 @@ def run_gui(initial_user=None):
         def selected(self):
             s = list(self.tv_mods.selection())
             if not s:
-                messagebox.showinfo("NWN Mod Manager", "Selecciona uno o más mods de la lista.")
+                messagebox.showinfo("NITREWRITTEN", "Please select one or more mods from the list.")
             return s
 
         def _need_lib(self):
             if not self.lib:
-                messagebox.showinfo("NWN Mod Manager", "Primero elige o agrega una instalación.")
+                messagebox.showinfo("NITREWRITTEN", "Please select or add a game installation first.")
             return self.lib
 
         def do_install(self, paths):
             for p in paths:
                 n = self.guard(self.lib.install, p, None, self.v_lower.get(), self.ask_conflict)
                 if n:
-                    self.log(f"✔ Instalado: {n}")
+                    self.log(f"✔ Installed: {n}")
             self.refresh_all()
 
         def install_files(self):
             if not self._need_lib():
                 return
-            ps = filedialog.askopenfilenames(title="Mods", filetypes=[
-                ("Mods y paquetes", "*.zip *.7z *.rar *.tar *.gz *.bz2 *.xz *.hak *.tlk *.mod *.erf *.nwm"),
-                ("Todos", "*.*")])
+            ps = filedialog.askopenfilenames(title="Select Mod Files", filetypes=[
+                ("Mods & Packages", "*.zip *.7z *.rar *.tar *.gz *.bz2 *.xz *.hak *.tlk *.mod *.erf *.nwm"),
+                ("All Files", "*.*")])
             if ps:
                 self.do_install(ps)
 
         def install_dir(self):
             if self._need_lib():
-                d = filedialog.askdirectory(title="Carpeta del mod ya descomprimido")
+                d = filedialog.askdirectory(title="Select Unpacked Mod Folder")
                 if d:
                     self.do_install([d])
 
         def install_url(self):
             if not self._need_lib():
                 return
-            url = simpledialog.askstring("Instalar desde URL", "Enlace directo de descarga:")
+            url = simpledialog.askstring("Install from URL", "Direct download link:")
             if not url:
                 return
-            self.log(f"Descargando {url} …")
+            self.log(f"Downloading {url} ...")
             tmp = Path(tempfile.mkdtemp(prefix="nwnmods-"))
-
+            
             def worker():
                 try:
                     f = download(url, tmp)
                     self.after(0, lambda: (self.do_install([f]), shutil.rmtree(tmp, ignore_errors=True)))
                 except Exception as e:  # noqa: BLE001
-                    self.after(0, lambda: (self.log(f"✘ Descarga fallida: {e}"),
-                                           messagebox.showerror("Descarga fallida", str(e))))
+                    self.after(0, lambda: (self.log(f"✘ Download failed: {e}"),
+                                           messagebox.showerror("Download Failed", str(e))))
 
             threading.Thread(target=worker, daemon=True).start()
 
         def enable(self):
             for n in self.selected():
                 self.guard(self.lib.enable, n, self.ask_conflict)
-                self.log(f"Activado: {n}")
+                self.log(f"Enabled: {n}")
             self.refresh_all()
-
+        
         def disable(self):
             for n in self.selected():
                 self.guard(self.lib.disable, n)
-                self.log(f"Desactivado: {n}")
+                self.log(f"Disabled: {n}")
             self.refresh_all()
-
+        
         def remove(self):
             s = self.selected()
-            if s and messagebox.askyesno("Desinstalar", f"¿Desinstalar {len(s)} mod(s)?"):
+            if s and messagebox.askyesno("Uninstall", f"Uninstall {len(s)} mod(s)?"):
                 for n in s:
                     self.guard(self.lib.remove, n)
-                    self.log(f"Desinstalado: {n}")
+                    self.log(f"Uninstalled: {n}")
                 self.refresh_all()
 
         def _text_window(self, title, text):
@@ -1195,14 +1280,21 @@ def run_gui(initial_user=None):
         def show_files(self):
             for n in self.selected()[:1]:
                 m = self.lib.mods[n]
-                self._text_window(f"{n} — {len(m['files'])} archivos", "\n".join(m["files"]))
+                self._text_window(f"{n} — {len(m['files'])} files", "\n".join(m["files"]))
 
         def show_conflicts(self):
             if not self._need_lib():
                 return
             c = self.lib.conflicts_report()
-            txt = "\n".join(f"{f}\n    mods: {', '.join(ns)}  (gana el último instalado)" for f, ns in c.items())
-            self._text_window("Conflictos entre mods", txt or "Sin conflictos entre mods activos.")
+            txt = "\n".join(f"{f}\n    mods: {', '.join(ns)}  (last installed wins)" for f, ns in c.items())
+            self._text_window("Mod Conflicts", txt or "No conflicts between active mods.")
+
+        def do_cleanup(self):
+            if not self._need_lib(): return
+            if messagebox.askyesno("Clean Up", "This will delete all files in game folders that are NOT managed by any active mod. Continue?"):
+                count = self.guard(self.lib.cleanup)
+                self.log(f"✔ Cleaned up {count} unmanaged files.")
+                self.refresh_all()
 
         # ---- Vault
         def bg(self, fn, ok, err=None):
@@ -1217,7 +1309,7 @@ def run_gui(initial_user=None):
 
         def _net_err(self, e):
             self.vault_busy = False
-            self.v_lbl.configure(text="Error de red")
+            self.v_lbl.configure(text="Network error")
             self.log(f"✘ {e}")
 
         def _tab_changed(self, _e=None):
@@ -1229,23 +1321,26 @@ def run_gui(initial_user=None):
             top = ttk.Frame(p)
             top.pack(fill="x", pady=(0, 6))
             self.v_game = tk.StringVar(value="NWN:EE")
-            g = ttk.Combobox(top, state="readonly", width=8, values=list(VAULT_GAMES), textvariable=self.v_game)
+            g = ttk.Combobox(top, state="readonly", width=10, values=list(VAULT_GAMES), textvariable=self.v_game)
             g.pack(side="left")
             g.bind("<<ComboboxSelected>>", lambda e: self.vault_load())
-            self.v_cat = ttk.Combobox(top, state="readonly", width=18, values=["(todas)"])
-            self.v_cat.set("(todas)")
-            self.v_cat.pack(side="left", padx=4)
+            self.v_cat = ttk.Combobox(top, state="readonly", width=20, values=["(all)"])
+            self.v_cat.set("(all)")
+            self.v_cat.pack(side="left", padx=5)
             self.v_cat.bind("<<ComboboxSelected>>", lambda e: self.vault_filter())
+            
             self.v_q = tk.StringVar()
-            ttk.Entry(top, textvariable=self.v_q).pack(side="left", fill="x", expand=True, padx=4)
+            ttk.Label(top, text="Search: ", foreground="#888").pack(side="left", padx=(5, 0))
+            ttk.Entry(top, textvariable=self.v_q).pack(side="left", fill="x", expand=True, padx=5)
             self.v_q.trace_add("write", lambda *a: self.vault_filter())
-            ttk.Button(top, text="Actualizar", command=lambda: self.vault_load(True)).pack(side="left", padx=2)
-            self.v_lbl = ttk.Label(top, foreground="#555")
-            self.v_lbl.pack(side="left", padx=6)
-            cols = ("nombre", "categoria", "autor", "publicado", "votos")
+            ttk.Button(top, text="Refresh", command=lambda: self.vault_load(True)).pack(side="left", padx=2)
+            self.v_lbl = ttk.Label(top, foreground="#1a73e8", font=("Segoe UI", 9, "bold"))
+            self.v_lbl.pack(side="left", padx=10)
+            
+            cols = ("name", "category", "author", "posted", "votes")
             self.tv_vault = self._tree(p, cols, (330, 110, 130, 90, 60))
             for c in cols:
-                self.tv_vault.heading(c, text=c.capitalize(), command=lambda c=c: self.vault_sort_by(c))
+                self.tv_vault.heading(c, text=c.title(), command=lambda c=c: self.vault_sort_by(c))
             self.tv_vault.bind("<<TreeviewSelect>>", self.vault_select)
             det = ttk.Frame(p)
             det.pack(fill="x", pady=(6, 0))
@@ -1255,26 +1350,26 @@ def run_gui(initial_user=None):
             self.v_det.pack(side="left", fill="both", expand=True)
             side = ttk.Frame(det)
             side.pack(side="left", fill="y", padx=(8, 0))
-            ttk.Label(side, text="Archivos:").pack(anchor="w")
-            self.lb_vfiles = tk.Listbox(side, height=4, width=34, exportselection=False)
+            ttk.Label(side, text="Files:").pack(anchor="w")
+            self.lb_vfiles = tk.Listbox(side, height=4, width=34, exportselection=False, font=("Segoe UI", 9))
             self.lb_vfiles.pack(fill="x")
-            ttk.Button(side, text="⬇ Descargar e instalar", command=self.vault_install).pack(fill="x", pady=(6, 2))
-            ttk.Button(side, text="Abrir página", command=lambda: self.vault_sel and
+            ttk.Button(side, text="⬇ Download & Install", command=self.vault_install).pack(fill="x", pady=(6, 2))
+            ttk.Button(side, text="Open Page", command=lambda: self.vault_sel and
                        webbrowser.open(self.vault_sel["url"])).pack(fill="x")
 
         def vault_load(self, force=False):
             if self.vault_busy:
                 return
             self.vault_busy = True
-            self.v_lbl.configure(text="Cargando catálogo…")
+            self.v_lbl.configure(text="Loading catalog...")
             game = VAULT_GAMES[self.v_game.get()]
-
+            
             def ok(items):
                 self.vault_busy = False
                 self.vault_items = items
-                self.v_cat.configure(values=["(todas)"] + sorted({i["cat"] for i in items if i["cat"]}))
-                self.v_cat.set("(todas)")
-                self.log(f"Vault: {len(items)} proyectos ({self.v_game.get()})")
+                self.v_cat.configure(values=["(all)"] + sorted({i["cat"] for i in items if i["cat"]}))
+                self.v_cat.set("(all)")
+                self.log(f"Vault: {len(items)} projects ({self.v_game.get()})")
                 self.vault_filter()
 
             self.bg(lambda: vault_catalog(game, force), lambda i: ok(i))
@@ -1285,12 +1380,12 @@ def run_gui(initial_user=None):
             self.vault_filter()
 
         def vault_filter(self):
-            keys = {"nombre": "title", "categoria": "cat", "autor": "author", "publicado": "posted", "votos": "votes"}
+            keys = {"name": "title", "category": "cat", "author": "author", "posted": "posted", "votes": "votes"}
             col, desc = self.vault_sort
             k = keys.get(col, col)
             cat, q = self.v_cat.get(), self.v_q.get().lower().strip()
             rows = [i for i in self.vault_items
-                    if (cat in ("", "(todas)") or i["cat"] == cat)
+                    if (cat in ("", "(all)") or i["cat"] == cat)
                     and (not q or q in f'{i["title"]} {i["author"]} {i["desc"]} {i["cat"]}'.lower())]
             rows.sort(key=lambda i: i[k].lower() if isinstance(i[k], str) else i[k], reverse=desc)
             self.vault_shown = rows[:3000]
@@ -1298,7 +1393,7 @@ def run_gui(initial_user=None):
             for n, i in enumerate(self.vault_shown):
                 self.tv_vault.insert("", "end", iid=str(n),
                                      values=(i["title"], i["cat"], i["author"], i["posted"], i["votes"]))
-            self.v_lbl.configure(text=f"{len(rows)} resultados" if self.vault_items else "")
+            self.v_lbl.configure(text=f"{len(rows)} results" if self.vault_items else "")
 
         def _vtext(self, txt):
             self.v_det.configure(state="normal")
@@ -1314,24 +1409,24 @@ def run_gui(initial_user=None):
             self.vault_sel = it
             self.lb_vfiles.delete(0, "end")
             self.v_img.configure(image="", text="")
-            self._vtext(f'{it["title"]}\n{it["author"]} · {it["cat"]} · {it["posted"]}\n\n{it["desc"]}\n\nCargando detalles…')
+            self._vtext(f'{it["title"]}\n{it["author"]} · {it["cat"]} · {it["posted"]}\n\n{it["desc"]}\n\nLoading details...')
             if it["url"] in self.vault_info:
                 return self._vault_details(it, self.vault_info[it["url"]])
-
+            
             def ok(info):
                 self.vault_info[it["url"]] = info
                 if self.vault_sel is it:
                     self._vault_details(it, info)
-
+            
             self.bg(lambda: parse_project(http_get(it["url"]), it["url"]), lambda i: ok(i),
-                    lambda e: (self._vtext(f'{it["title"]}\n\n{it["desc"]}\n\n(No pude cargar los detalles: {e})')))
+                    lambda e: (self._vtext(f'{it["title"]}\n\n{it["desc"]}\n\n(Could not load details: {e})')))
 
         def _vault_details(self, it, info):
             lines = [info["title"] or it["title"], ""]
             lines += [f"{k}: {v}" for k, v in info["fields"].items()]
             lines += ["", info["desc"] or it["desc"]]
             if not info["files"]:
-                lines += ["", "(Sin enlace de descarga directo: usa «Abrir página».)"]
+                lines += ["", "(No direct download link available. Use 'Open Page'.)"]
             self._vtext("\n".join(lines))
             self.lb_vfiles.delete(0, "end")
             for f in info["files"]:
@@ -1365,27 +1460,27 @@ def run_gui(initial_user=None):
             it = self.vault_sel
             info = self.vault_info.get(it["url"]) if it else None
             if not it:
-                return messagebox.showinfo("Vault", "Selecciona un mod de la lista.")
+                return messagebox.showinfo("Vault", "Select a mod from the list.")
             if not info or not info["files"]:
-                return messagebox.showinfo("Vault", "Este proyecto no tiene descarga directa. Usa «Abrir página».")
+                return messagebox.showinfo("Vault", "This project has no direct download. Use 'Open Page'.")
             sel = self.lb_vfiles.curselection()
             f = info["files"][sel[0] if sel else 0]
             name = re.sub(r'[\\/:*?"<>|]+', "-", info["title"] or it["title"]).strip()[:80]
-            self.log(f"Descargando {f['name']} …")
+            self.log(f"Downloading {f['name']} ...")
             tmp = Path(tempfile.mkdtemp(prefix="nwnmods-"))
-
+            
             def done(path):
                 n = self.guard(self.lib.install, path, name, self.v_lower.get(), self.ask_conflict, it["url"])
                 shutil.rmtree(tmp, ignore_errors=True)
                 if n:
-                    self.log(f"✔ Instalado desde el Vault: {n}")
+                    self.log(f"✔ Installed from Vault: {n}")
                     self.refresh_all()
-
+            
             def fail(e):
                 shutil.rmtree(tmp, ignore_errors=True)
-                self.log(f"✘ Descarga fallida: {e}")
-                messagebox.showerror("Descarga fallida", str(e))
-
+                self.log(f"✘ Download failed: {e}")
+                messagebox.showerror("Download Failed", str(e))
+            
             self.bg(lambda: download(f["url"], tmp, it["url"], f["name"]), lambda p: done(p), lambda e: fail(e))
 
         # ---- perfiles y copias
@@ -1395,16 +1490,16 @@ def run_gui(initial_user=None):
 
         def prof_save(self):
             if self._need_lib():
-                n = simpledialog.askstring("Perfil", "Nombre del perfil:")
+                n = simpledialog.askstring("Profile", "Profile name:")
                 if n:
                     self.lib.save_profile(n)
                     self.refresh_profiles()
-
+        
         def prof_apply(self):
             n = self.prof_name()
             if n:
                 self.guard(self.lib.apply_profile, n, self.ask_conflict)
-                self.log(f"Perfil aplicado: {n}")
+                self.log(f"Profile applied: {n}")
                 self.refresh_all()
 
         def prof_del(self):
@@ -1418,14 +1513,14 @@ def run_gui(initial_user=None):
             if self._need_lib():
                 p = self.guard(self.lib.backup)
                 if p:
-                    self.log(f"✔ Copia creada: {p.name}")
+                    self.log(f"✔ Backup created: {p.name}")
                     self.refresh_backups()
-
+        
         def bak_restore(self):
             s = self.lb_bak.curselection()
-            if s and messagebox.askyesno("Restaurar", "Esto sobrescribe guardados con el mismo nombre. ¿Continuar?"):
+            if s and messagebox.askyesno("Restore", "This will overwrite existing saves with the same name. Continue?"):
                 self.guard(self.lib.restore, self.lib.base / "backups" / self.lb_bak.get(s[0]))
-                self.log("✔ Copia restaurada")
+                self.log("✔ Backup restored")
 
     App().mainloop()
 
@@ -1433,27 +1528,27 @@ def run_gui(initial_user=None):
 # --------------------------------------------------------------------------- CLI
 def pick(args):
     if args.user:
-        return Game(args.user, "Personalizada", "manual", args.user)
+        return Game(args.user, "Custom", "manual", args.user)
     games = detect_all()
     if not games:
-        raise Err("No encontre NWN. Usa --user RUTA_DE_DATOS o abre la interfaz y agrega la carpeta.")
+        raise Err("Could not find NWN. Use --user DATA_PATH or open the GUI and add the folder.")
     return games[args.game]
 
 
 def cli(argv):
-    ap = argparse.ArgumentParser(prog="nwnmods", description="Mod manager para Neverwinter Nights")
-    ap.add_argument("--game", type=int, default=0, help="indice mostrado por 'detect'")
-    ap.add_argument("--user", help="carpeta de datos (hak, override, modules...)")
+    ap = argparse.ArgumentParser(prog="nwnmods", description="Professional Mod Manager for Neverwinter Nights")
+    ap.add_argument("--game", type=int, default=0, help="index shown by 'detect'")
+    ap.add_argument("--user", help="data folder (hak, override, modules...)")
     sp = ap.add_subparsers(dest="cmd")
     sp.add_parser("gui")
     sp.add_parser("detect")
     i = sp.add_parser("install")
-    i.add_argument("archivo")
+    i.add_argument("file")
     i.add_argument("--name")
-    i.add_argument("--force", action="store_true", help="sobrescribir (con respaldo)")
+    i.add_argument("--force", action="store_true", help="overwrite (with backup)")
     i.add_argument("--keep-case", action="store_true")
     for c in ("enable", "disable", "remove"):
-        sp.add_parser(c).add_argument("nombre")
+        sp.add_parser(c).add_argument("name")
     for c in ("list", "conflicts", "backup", "launch"):
         sp.add_parser(c)
     sp.add_parser("restore").add_argument("zip")
@@ -1462,30 +1557,30 @@ def cli(argv):
         return run_gui(a.user)
     if a.cmd == "detect":
         for n, g in enumerate(detect_all()):
-            print(f"[{n}] {g.label}\n     datos: {g.user}")
+            print(f"[{n}] {g.label}\n     data: {g.user}")
         return
     g = pick(a)
     lib = Library(g.user)
     cfg = load_cfg()
     if a.cmd == "install":
-        n = lib.install(a.archivo, a.name, not a.keep_case and cfg["lowercase"],
+        n = lib.install(a.file, a.name, not a.keep_case and cfg["lowercase"],
                         lambda c: "overwrite" if a.force else "skip")
-        print(f"✔ '{n}': {len(lib.mods[n]['files'])} archivos")
+        print(f"✔ '{n}': {len(lib.mods[n]['files'])} files")
     elif a.cmd == "list":
         for n, m in lib.mods.items():
-            print(f"{'●' if m['enabled'] else '○'} {n}  ({len(m['files'])} archivos)")
+            print(f"{'●' if m['enabled'] else '○'} {n}  ({len(m['files'])} files)")
     elif a.cmd == "enable":
-        lib.enable(a.nombre, lambda c: "overwrite")
+        lib.enable(a.name, lambda c: "overwrite")
     elif a.cmd == "disable":
-        lib.disable(a.nombre)
+        lib.disable(a.name)
     elif a.cmd == "remove":
-        lib.remove(a.nombre)
+        lib.remove(a.name)
     elif a.cmd == "conflicts":
         c = lib.conflicts_report()
         for f, ns in c.items():
             print(f"{f}: {', '.join(ns)}")
         if not c:
-            print("Sin conflictos.")
+            print("No conflicts found.")
     elif a.cmd == "backup":
         print(lib.backup())
     elif a.cmd == "restore":
