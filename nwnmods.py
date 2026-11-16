@@ -70,7 +70,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -1328,6 +1328,47 @@ class Library:
             if name in self.mods and self.mods[name].get("enabled"):
                 self.disable(name)
 
+
+    def ffmpeg_available(self):
+        import shutil as _sh
+        cfg = load_cfg() if False else None
+        try:
+            from .config import load_cfg as _lc
+            cfg = _lc()
+        except Exception:
+            import nwnmods as _n
+            cfg = _n.load_cfg() if hasattr(_n, "load_cfg") else {}
+        p = (cfg or {}).get("ffmpeg_path")
+        if p and Path(p).is_file():
+            return p
+        return _sh.which("ffmpeg")
+
+    def find_bik_without_wbm(self):
+        out = []
+        for f in self.user.rglob("*.bik"):
+            if f.is_file() and not f.with_suffix(".wbm").exists():
+                out.append(f)
+        return out
+
+    def convert_bik(self, files=None, ffmpeg=None):
+        import subprocess as _sp
+        if files is None:
+            files = self.find_bik_without_wbm()
+        ffmpeg = ffmpeg or self.ffmpeg_available()
+        if not ffmpeg:
+            raise Err("FFmpeg not found. Install FFmpeg or set ffmpeg_path in config.")
+        converted = []
+        for bik in files:
+            bik = Path(bik)
+            wbm = bik.with_suffix(".wbm")
+            try:
+                _sp.run([ffmpeg, "-y", "-i", str(bik), str(wbm)], check=True,
+                        stdout=_sp.DEVNULL, stderr=_sp.DEVNULL)
+            except _sp.CalledProcessError:
+                raise Err(f"Failed to convert {bik}")
+            converted.append(wbm)
+        return converted
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
@@ -1558,6 +1599,7 @@ def run_gui(initial_user=None):
             self.vault_shown, self.vault_busy, self.vault_sort, self._img = [], False, ("posted", True), None
             self.v_dark = tk.BooleanVar(value=self.cfg.get("dark_mode", False))
             self.v_lower = tk.BooleanVar(value=self.cfg["lowercase"])
+            self.v_convert_bik = tk.BooleanVar(value=self.cfg.get("convert_bik", True))
             self.v_policy = tk.StringVar(value=self.cfg["policy"])
             
             self._apply_theme() # Apply theme BEFORE building to set correct styles
@@ -1845,6 +1887,10 @@ def run_gui(initial_user=None):
                 ttk.Radiobutton(p, text=t, value=v, variable=self.v_policy,
                                 command=self.save_settings).pack(anchor="w", padx=20, pady=2)
             
+            ttk.Checkbutton(p, text="Convert BIK to WBM for EE (requires FFmpeg)",
+                            variable=self.v_convert_bik, command=self.save_settings).pack(anchor="w", pady=8)
+            ttk.Button(p, text="Convert BIK files now", command=self.convert_bik_ui).pack(anchor="w", pady=4)
+            
             ttk.Separator(p, orient="horizontal").pack(fill="x", pady=20)
             
             ttk.Button(p, text="Change Game Data Folder...",
@@ -1876,6 +1922,7 @@ def run_gui(initial_user=None):
         def save_settings(self):
             self.cfg["lowercase"], self.cfg["policy"] = self.v_lower.get(), self.v_policy.get()
             self.cfg["dark_mode"] = self.v_dark.get()
+            self.cfg["convert_bik"] = self.v_convert_bik.get()
             save_cfg(self.cfg)
             self._apply_theme()
 
@@ -2130,6 +2177,23 @@ def run_gui(initial_user=None):
             if isinstance(res, dict):
                 self.log(f"Cleaned up {res['count']} unmanaged files. Recovery: {res['trash']}")
             self.refresh_all()
+
+        def convert_bik_ui(self):
+            if not self._need_lib():
+                return
+            files = self.lib.find_bik_without_wbm()
+            if not files:
+                messagebox.showinfo("BIK Conversion", "No .bik files without .wbm found.")
+                return
+            if not self.lib.ffmpeg_available():
+                messagebox.showerror("BIK Conversion", "FFmpeg not found. Install FFmpeg or set ffmpeg_path in config.")
+                return
+            if not messagebox.askyesno("BIK Conversion", f"Convert {len(files)} .bik file(s) to .wbm?"):
+                return
+            conv = self.guard(self.lib.convert_bik, files)
+            if conv:
+                self.log(f"Converted {len(conv)} .bik file(s).")
+                self.refresh_all()
 
         # ---- Vault
         def bg(self, fn, ok, err=None):

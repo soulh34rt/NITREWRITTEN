@@ -43,6 +43,7 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    cb = sp.add_parser("convert-bik"); cb.add_argument("--all", action="store_true")
     gr = sp.add_parser("group")
     gsv = gr.add_subparsers(dest="group_cmd")
     gsv.add_parser("list")
@@ -154,6 +155,12 @@ def cli(argv):
             lib.activate_group(a.name); print(f"[OK] activated group {a.name}")
         elif gc == "deactivate":
             lib.deactivate_group(a.name); print(f"[OK] deactivated group {a.name}")
+    elif a.cmd == "convert-bik":
+        files = lib.find_bik_without_wbm() if a.all else None
+        conv = lib.convert_bik(files)
+        print(f"[OK] converted {len(conv)} file(s)")
+        for c in conv:
+            print(f"  {c}")
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":

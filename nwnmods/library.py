@@ -533,6 +533,47 @@ class Library:
             if name in self.mods and self.mods[name].get("enabled"):
                 self.disable(name)
 
+
+    def ffmpeg_available(self):
+        import shutil as _sh
+        cfg = load_cfg() if False else None
+        try:
+            from .config import load_cfg as _lc
+            cfg = _lc()
+        except Exception:
+            import nwnmods as _n
+            cfg = _n.load_cfg() if hasattr(_n, "load_cfg") else {}
+        p = (cfg or {}).get("ffmpeg_path")
+        if p and Path(p).is_file():
+            return p
+        return _sh.which("ffmpeg")
+
+    def find_bik_without_wbm(self):
+        out = []
+        for f in self.user.rglob("*.bik"):
+            if f.is_file() and not f.with_suffix(".wbm").exists():
+                out.append(f)
+        return out
+
+    def convert_bik(self, files=None, ffmpeg=None):
+        import subprocess as _sp
+        if files is None:
+            files = self.find_bik_without_wbm()
+        ffmpeg = ffmpeg or self.ffmpeg_available()
+        if not ffmpeg:
+            raise Err("FFmpeg not found. Install FFmpeg or set ffmpeg_path in config.")
+        converted = []
+        for bik in files:
+            bik = Path(bik)
+            wbm = bik.with_suffix(".wbm")
+            try:
+                _sp.run([ffmpeg, "-y", "-i", str(bik), str(wbm)], check=True,
+                        stdout=_sp.DEVNULL, stderr=_sp.DEVNULL)
+            except _sp.CalledProcessError:
+                raise Err(f"Failed to convert {bik}")
+            converted.append(wbm)
+        return converted
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
