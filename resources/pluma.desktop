@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Pluma
-Comment=NitRewritten - Pluma
-Exec=/ruta/a/tu/programa
+Name=NITREWRITTEN
+Comment=Professional Mod Manager for Neverwinter Nights (Linux-first)
+Exec=NITREWRITTEN
 Icon=pluma
 Terminal=false
-Categories=Utility;
+Categories=Game;Utility;

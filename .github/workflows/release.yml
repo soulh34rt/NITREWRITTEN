@@ -5,6 +5,7 @@ on:
     tags:
       - 'v*'
       - '1.0'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,11 +14,11 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -25,9 +26,9 @@ jobs:
           pip install pyinstaller
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py
+          pyinstaller --onefile --noconsole --name NITREWRITTEN --icon resources/pluma.ico --add-data "resources;resources" nwnmods.py
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/NITREWRITTEN.exe
         env:
@@ -36,15 +37,15 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk
+          sudo apt-get install -y python3-tk libfuse2
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -52,16 +53,36 @@ jobs:
           pip install pyinstaller
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --name NITREWRITTEN nwnmods.py
+          pyinstaller --onefile --noconsole --name NITREWRITTEN --add-data "resources:resources" nwnmods.py
+          mv dist/NITREWRITTEN dist/NITREWRITTEN-linux
       - name: Build AppImage
         run: |
-          # Simple AppImage creation logic or just upload binary if AppImage tool is complex
-          # For now, we'll provide the Linux binary. To make it a true AppImage we'd need appimagetool.
-          # However, a standalone binary is often sufficient for these simple tools.
-          mv dist/NITREWRITTEN dist/NITREWRITTEN-linux
+          set -e
+          APPDIR=NITREWRITTEN.AppDir
+          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
+          cp dist/NITREWRITTEN-linux "$APPDIR/usr/bin/NITREWRITTEN"
+          chmod +x "$APPDIR/usr/bin/NITREWRITTEN"
+          cp resources/pluma.desktop "$APPDIR/NITREWRITTEN.desktop"
+          cp resources/pluma.desktop "$APPDIR/usr/share/applications/NITREWRITTEN.desktop"
+          cp resources/pluma.svg "$APPDIR/NITREWRITTEN.svg"
+          cp resources/pluma.svg "$APPDIR/usr/share/icons/hicolor/512x512/apps/NITREWRITTEN.svg"
+          cat > "$APPDIR/AppRun" <<'EOF'
+          #!/bin/sh
+          SELF=$(readlink -f "$0")
+          HERE=$(dirname "$SELF")
+          export PATH="$HERE/usr/bin:$PATH"
+          exec "$HERE/usr/bin/NITREWRITTEN" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+          # download appimagetool
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool "$APPDIR" NITREWRITTEN-x86_64.AppImage
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: dist/NITREWRITTEN-linux
+          files: |
+            dist/NITREWRITTEN-linux
+            NITREWRITTEN-x86_64.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

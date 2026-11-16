@@ -48,6 +48,13 @@ class Err(Exception):
     pass
 
 
+# --------------------------------------------------------------------------- safety limits
+MAX_ENTRIES = 10000
+MAX_FILE_BYTES = 512 * 1024 * 1024  # 512 MiB per file
+MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB per archive
+MAX_NAME_LEN = 255
+
+
 # --------------------------------------------------------------------------- config
 def cfg_dir() -> Path:
     if SYS == "Windows":
@@ -65,15 +72,18 @@ CFG = cfg_dir() / "config.json"
 def load_cfg() -> dict:
     d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}}
     try:
-        d.update(json.loads(CFG.read_text(encoding="utf-8")))
-    except Exception:
-        pass
+        if CFG.exists():
+            d.update(json.loads(CFG.read_text(encoding="utf-8")))
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write(f"nwnmods: could not read config {CFG}: {e!r}\n")
     return d
 
 
 def save_cfg(c: dict):
     CFG.parent.mkdir(parents=True, exist_ok=True)
-    CFG.write_text(json.dumps(c, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp = CFG.with_suffix(".tmp")
+    tmp.write_text(json.dumps(c, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(CFG)
 
 
 # --------------------------------------------------------------------------- detection
@@ -325,84 +335,285 @@ def map_path(rel: Path, lowercase: bool):
     return Path(sub) / name
 
 
+def _safe_member_name(name: str) -> str:
+    """Reject absolute / traversal / NUL / overly long member names."""
+    if not name or "\x00" in name:
+        raise Err("Archive contains insecure paths.")
+    # normalize separators
+    name = name.replace("\\", "/")
+    if name.startswith("/") or name.startswith("../") or "/../" in name or name.endswith("/.."):
+        raise Err("Archive contains insecure paths.")
+    parts = [p for p in name.split("/") if p not in ("", ".")]
+    if any(p == ".." for p in parts):
+        raise Err("Archive contains insecure paths.")
+    if len(name) > MAX_NAME_LEN * 4:
+        raise Err("Archive member name too long.")
+    return name
+
+
 def _inside(out: Path, name: str) -> bool:
-    dest = (out / name).resolve()
-    root = out.resolve()
-    return dest == root or str(dest).startswith(str(root) + os.sep)
+    try:
+        _safe_member_name(name)
+    except Err:
+        return False
+    # lexical check (no resolve, to avoid following symlinks in out)
+    try:
+        dest = (out / name).resolve() if False else (out / name)
+    except Exception:
+        return False
+    root = out
+    try:
+        dest.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _check_total(total: int):
+    if total > MAX_TOTAL_BYTES:
+        raise Err("Archive exceeds maximum allowed size.")
+
+
+def _strip_symlinks(root: Path):
+    """Remove any symlink created during extraction (defense in depth)."""
+    for p in list(root.rglob("*")):
+        if p.is_symlink():
+            try:
+                if p.is_dir() and not p.is_file():
+                    p.unlink()
+                else:
+                    p.unlink()
+            except OSError:
+                raise Err("Archive contains symlink entries.")
 
 
 def extract(src: Path, out: Path):
     if src.is_dir():
         shutil.copytree(src, out, dirs_exist_ok=True)
         return
+    # single known file types
+    if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
+        if src.stat().st_size > MAX_FILE_BYTES:
+            raise Err("File too large.")
+        shutil.copy2(src, out / src.name)
+        return
+
+    # ZIP
     if zipfile.is_zipfile(src):
         with zipfile.ZipFile(src) as z:
-            for m in z.infolist():
+            infos = z.infolist()
+            if len(infos) > MAX_ENTRIES:
+                raise Err("Archive has too many entries.")
+            total = 0
+            for m in infos:
+                _safe_member_name(m.filename)
+                if m.file_size > MAX_FILE_BYTES:
+                    raise Err("Archive member too large.")
+                total += m.file_size
+                _check_total(total)
+                # reject symlinks in unix mode
+                mode = (m.external_attr >> 16) & 0xFFFF
+                if (mode & 0xF000) == 0xA000:
+                    raise Err("Archive contains symlink entries.")
+            # extract member by member with path check
+            for m in infos:
+                if m.is_dir():
+                    target = out / _safe_member_name(m.filename)
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target = out / _safe_member_name(m.filename)
                 if not _inside(out, m.filename):
                     raise Err("Archive contains insecure paths.")
-            z.extractall(out)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(m) as srcf, open(target, "wb") as dstf:
+                    shutil.copyfileobj(srcf, dstf)
+        _strip_symlinks(out)
         return
+
+    # TAR
     if tarfile.is_tarfile(src):
         with tarfile.open(src) as t:
-            for m in t.getmembers():
-                if not _inside(out, m.name):
-                    raise Err("Archive contains insecure paths.")
+            members = t.getmembers()
+            if len(members) > MAX_ENTRIES:
+                raise Err("Archive has too many entries.")
+            total = 0
+            for m in members:
+                _safe_member_name(m.name)
+                if m.isfile():
+                    if m.size > MAX_FILE_BYTES:
+                        raise Err("Archive member too large.")
+                    total += m.size
+                    _check_total(total)
+                # reject dangerous member types
+                if m.issym() or m.islnk() or m.isdev() or m.ischr() or m.isblk() or m.isfifo():
+                    raise Err("Archive contains unsafe entry types.")
+            # use filter when available (3.11.4+/3.12+), else manual
             try:
                 t.extractall(out, filter="data")
             except TypeError:
-                t.extractall(out)
+                # older Python: extract manually with validation
+                for m in members:
+                    if m.isdir():
+                        (out / _safe_member_name(m.name)).mkdir(parents=True, exist_ok=True)
+                        continue
+                    if not m.isfile():
+                        continue
+                    target = out / _safe_member_name(m.name)
+                    if not _inside(out, m.name):
+                        raise Err("Archive contains insecure paths.")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with t.extractfile(m) as srcf, open(target, "wb") as dstf:  # type: ignore
+                        shutil.copyfileobj(srcf, dstf)
+        _strip_symlinks(out)
         return
+
+    # 7z
     if src.suffix.lower() == ".7z":
+        # prefer py7zr
         try:
             import py7zr  # type: ignore
             with py7zr.SevenZipFile(src) as z:
+                names = z.getnames()
+                if len(names) > MAX_ENTRIES:
+                    raise Err("Archive has too many entries.")
+                for n in names:
+                    _safe_member_name(n)
                 z.extractall(out)
+            _strip_symlinks(out)
             return
         except ImportError:
             pass
+        # external tool fallback
+        tools = ["7z", "7zz", "7za", "7zr"]
+        if SYS == "Windows":
+            for pf in ("ProgramFiles", "ProgramFiles(x86)"):
+                if os.environ.get(pf):
+                    tools.append(str(Path(os.environ[pf]) / "7-Zip/7z.exe"))
+        for tool in tools:
+            if shutil.which(tool) or Path(tool).is_file():
+                subprocess.run([tool, "x", "-y", f"-o{out}", str(src)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _strip_symlinks(out)
+                # validate all extracted paths stayed inside out
+                for p in out.rglob("*"):
+                    try:
+                        p.relative_to(out)
+                    except ValueError:
+                        raise Err("Archive contains insecure paths.")
+                return
+        raise Err("Could not open .7z archive. Install 7-Zip (7z) or py7zr.")
+
+    # RAR
+    if src.suffix.lower() == ".rar":
+        # try rarfile
+        try:
+            import rarfile  # type: ignore
+            with rarfile.RarFile(src) as rf:
+                infos = rf.infolist()
+                if len(infos) > MAX_ENTRIES:
+                    raise Err("Archive has too many entries.")
+                total = 0
+                for m in infos:
+                    _safe_member_name(m.filename)
+                    if m.file_size > MAX_FILE_BYTES:
+                        raise Err("Archive member too large.")
+                    total += m.file_size
+                    _check_total(total)
+                rf.extractall(out)
+            _strip_symlinks(out)
+            return
+        except ImportError:
+            pass
+        for cmd in (["unrar", "x", "-y", str(src), str(out) + os.sep], ["bsdtar", "-xf", str(src), "-C", str(out)]):
+            if shutil.which(cmd[0]):
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _strip_symlinks(out)
+                return
+        raise Err("Could not open .rar archive. Install unrar/bsdtar or rarfile.")
+
+    # fallback external 7z for unknown archives
     tools = ["7z", "7zz", "7za", "7zr"]
     if SYS == "Windows":
         for pf in ("ProgramFiles", "ProgramFiles(x86)"):
             if os.environ.get(pf):
                 tools.append(str(Path(os.environ[pf]) / "7-Zip/7z.exe"))
-    for t in tools:
-        if shutil.which(t) or Path(t).is_file():
-            subprocess.run([t, "x", "-y", f"-o{out}", str(src)], check=True, stdout=subprocess.DEVNULL)
+    for tool in tools:
+        if shutil.which(tool) or Path(tool).is_file():
+            subprocess.run([tool, "x", "-y", f"-o{out}", str(src)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _strip_symlinks(out)
             return
-    if src.suffix.lower() == ".rar":
-        for cmd in (["unrar", "x", "-y", str(src), str(out) + os.sep], ["bsdtar", "-xf", str(src), "-C", str(out)]):
-            if shutil.which(cmd[0]):
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
-                return
-    if src.suffix.lower() in DEST or src.suffix.lower() in {".2da", ".nss", ".ncs", ".tga", ".dds", ".mdl"}:
-        shutil.copy2(src, out / src.name)
-        return
+
     raise Err("Could not open archive. For .7z/.rar install 7-Zip (7z) or py7zr.")
 
 
-def download(url: str, dest_dir: Path, referer=None, fallback=None) -> Path:
+def _safe_filename(name: str, fallback: str = "download.zip") -> str:
+    name = (name or "").strip()
+    name = name.replace("\\", "/").split("/")[-1]
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "-", name).strip(". ")
+    if not name or name.lower().endswith((".php", ".html", ".htm")):
+        name = fallback
+    if len(name) > MAX_NAME_LEN:
+        stem, ext = os.path.splitext(name)
+        name = stem[: MAX_NAME_LEN - len(ext)] + ext
+    return name or fallback
+
+
+def download(url: str, dest_dir: Path, referer=None, fallback=None, max_bytes=MAX_TOTAL_BYTES) -> Path:
     headers = {"User-Agent": UA}
     if referer:
         headers["Referer"] = referer
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=90) as r:
-        if r.headers.get("Content-Type", "").lower().startswith("text/html"):
-            raise Err("The site did not return a file (check your connection or login).")
-        name = None
-        m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)', r.headers.get("Content-Disposition", ""))
-        if m:
-            name = unquote(m.group(1))
-        name = name or unquote(Path(urlparse(r.geturl()).path).name)
-        if not name or name.lower().endswith((".php", ".html")):
-            name = fallback or "descarga.zip"
-        dest = dest_dir / Path(name).name
-        with open(dest, "wb") as f:
-            shutil.copyfileobj(r, f)
-    return dest
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=90) as r:
+            ct = r.headers.get("Content-Type", "").lower()
+            if ct.startswith("text/html"):
+                raise Err("The site did not return a file (check your connection or login).")
+            name = None
+            m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)', r.headers.get("Content-Disposition", ""))
+            if m:
+                name = unquote(m.group(1))
+            name = name or unquote(Path(urlparse(r.geturl()).path).name)
+            name = _safe_filename(name, fallback or "download.zip")
+            dest = dest_dir / name
+            total = 0
+            with open(dest, "wb") as f:
+                while True:
+                    chunk = r.read(64 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > max_bytes:
+                        f.close()
+                        try:
+                            dest.unlink(missing_ok=True)
+                        except OSError:
+                            pass
+                        raise Err("Download exceeds maximum allowed size.")
+                    f.write(chunk)
+            if total == 0:
+                try:
+                    dest.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise Err("Downloaded file is empty.")
+            return dest
+    except Err:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise Err(f"Download failed: {e}")
 
 
-def fetch_bytes(url: str, timeout=30) -> bytes:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=timeout) as r:
-        return r.read()
+def fetch_bytes(url: str, timeout=30, max_bytes=MAX_TOTAL_BYTES) -> bytes:
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=timeout) as r:
+            data = r.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                raise Err("Response too large.")
+            return data
+    except Err:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise Err(f"Request failed: {e}")
 
 
 # --------------------------------------------------------------------------- Neverwinter Vault
@@ -412,8 +623,18 @@ VAULT_TTL = 6 * 3600  # catalog is cached for 6h to avoid excessive requests
 
 
 def http_get(url: str, timeout=40) -> str:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=timeout) as r:
-        return r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
+    try:
+        headers = {"User-Agent": UA}
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as r:
+            charset = r.headers.get_content_charset() or "utf-8"
+            data = r.read(MAX_TOTAL_BYTES + 1)
+            if len(data) > MAX_TOTAL_BYTES:
+                raise Err("Response too large.")
+            return data.decode(charset, "replace")
+    except Err:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise Err(f"Request failed: {e}")
 
 
 def _norm(t: str) -> str:
@@ -593,8 +814,8 @@ class Library:
         if self.mf.exists():
             try:
                 self.d.update(json.loads(self.mf.read_text(encoding="utf-8")))
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                sys.stderr.write(f"nwnmods: could not read manifest {self.mf}: {e!r}\n")
 
     @property
     def mods(self) -> dict:
@@ -609,22 +830,74 @@ class Library:
     def owners(self) -> dict:
         return {f: n for n, m in self.mods.items() if m["enabled"] for f in m["files"]}
 
-    def cleanup(self) -> int:
-        """Deletes files in content directories that are not managed by any active mod."""
-        owners, count = self.owners(), 0
+    PROTECTED_DIRS = {"saves", "localvault", "servervault", "dmvault"}
+
+    def cleanup_preview(self, protect=None) -> list:
+        """Return list of (relative_posix_path, size) that cleanup would remove."""
+        if protect is None:
+            protect = self.PROTECTED_DIRS
+        owners = self.owners()
+        out = []
         for sub in CONTENT_DIRS:
+            if sub in protect:
+                continue
             d = self.user / sub
-            if not d.is_dir(): continue
+            if not d.is_dir():
+                continue
+            for f in d.rglob("*"):
+                if f.is_file():
+                    key = f.relative_to(self.user).as_posix()
+                    if key not in owners:
+                        try:
+                            out.append((key, f.stat().st_size))
+                        except OSError:
+                            out.append((key, 0))
+        return out
+
+    def cleanup(self, protect=None, to_trash=True) -> dict:
+        """Remove unmanaged files. Protects saves/characters by default; moves files to trash for recovery."""
+        if protect is None:
+            protect = self.PROTECTED_DIRS
+        owners = self.owners()
+        trash = None
+        if to_trash:
+            trash = self.base / "trash" / datetime.now().strftime("%Y%m%d-%H%M%S")
+            trash.mkdir(parents=True, exist_ok=True)
+        count = 0
+        removed = []
+        for sub in CONTENT_DIRS:
+            if sub in protect:
+                continue
+            d = self.user / sub
+            if not d.is_dir():
+                continue
             for f in sorted(d.rglob("*"), reverse=True):
                 if f.is_file():
                     key = f.relative_to(self.user).as_posix()
                     if key not in owners:
-                        f.unlink()
-                        count += 1
+                        try:
+                            if to_trash and trash is not None:
+                                dest = trash / key
+                                dest.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.move(str(f), str(dest))
+                            else:
+                                f.unlink()
+                            count += 1
+                            removed.append(key)
+                        except OSError:
+                            pass
                 elif f.is_dir():
-                    try: f.rmdir()
-                    except OSError: pass
-        return count
+                    try:
+                        f.rmdir()
+                    except OSError:
+                        pass
+        if trash is not None and count == 0:
+            try:
+                trash.rmdir()
+            except OSError:
+                pass
+            trash = None
+        return {"count": count, "trash": str(trash) if trash else None, "removed": removed}
 
     def _prune(self, rel: Path):
         p = (self.user / rel).parent
@@ -637,18 +910,38 @@ class Library:
 
     def _deploy(self, name, items, action, owners):
         files, stash = [], {}
-        for src, rel in items:
-            key, tgt = rel.as_posix(), self.user / rel
-            if tgt.exists() or tgt.is_symlink():
-                if action == "skip":
-                    continue
-                sp = self.base / "stash" / name / rel
-                sp.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(tgt), str(sp))
-                stash[key] = owners.get(key)
-            tgt.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(src), str(tgt))
-            files.append(key)
+        # rollback journal: list of (kind, src, dst)
+        journal = []
+        try:
+            for src, rel in items:
+                key, tgt = rel.as_posix(), self.user / rel
+                if tgt.exists() or tgt.is_symlink():
+                    if action == "skip":
+                        continue
+                    sp = self.base / "stash" / name / rel
+                    sp.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(tgt), str(sp))
+                    journal.append(("stash", sp, tgt))
+                    stash[key] = owners.get(key)
+                tgt.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(tgt))
+                journal.append(("deploy", tgt, src))
+                files.append(key)
+        except Exception:  # noqa: BLE001
+            # rollback
+            for kind, a, b in reversed(journal):
+                try:
+                    if kind == "deploy":
+                        if a.exists():
+                            a.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(a), str(b))
+                    else:
+                        if a.exists():
+                            b.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(a), str(b))
+                except OSError:
+                    pass
+            raise
         return files, stash
 
     def _conflicts(self, items):
@@ -686,7 +979,15 @@ class Library:
             raise Err("Nothing was installed (everything already existed).")
         self.mods[name] = {"files": files, "stash": stash, "enabled": True,
                            "date": datetime.now().isoformat(timespec="seconds"), "source": source or str(archive)}
-        self.save()
+        try:
+            self.save()
+        except Exception as e:  # noqa: BLE001
+            # rollback
+            try:
+                self._undeploy(name)
+            except Exception:
+                pass
+            raise Err(f"Could not save registry: {e}")
         return name
 
     def _undeploy(self, name, keep=None):
@@ -850,41 +1151,24 @@ def run_gui(initial_user=None):
             self.minsize(900, 700)
             
             # Load assets
-            self.res = Path(__file__).parent / "resources"
+            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+                self.res = Path(sys._MEIPASS) / "resources"
+            else:
+                self.res = Path(__file__).parent / "resources"
             try:
                 if (self.res / "pluma.ico").exists():
-                    if SYS == "Windows":
-                        self.iconbitmap(str(self.res / "pluma.ico"))
-                    else:
-                        try:
-                            # Try to use a small version of the banner as icon for Linux if pluma.png is missing
-                            # Or if we have Pillow, we can extract from .ico
-                            from PIL import Image, ImageTk
-                            icon_img = Image.open(self.res / "pluma.ico")
-                            self.icon_photo = ImageTk.PhotoImage(icon_img)
-                            self.iconphoto(True, self.icon_photo)
-                        except Exception:
-                            pass
+                    try:
+                        from PIL import Image, ImageTk
+                        icon_img = Image.open(self.res / "pluma.ico")
+                        self.icon_photo = ImageTk.PhotoImage(icon_img)
+                        self.iconphoto(True, self.icon_photo)
+                        if SYS == "Windows":
+                            self.iconbitmap(str(self.res / "pluma.ico"))
+                    except Exception:
+                        if SYS == "Windows":
+                            self.iconbitmap(str(self.res / "pluma.ico"))
             except Exception:
                 pass
-            
-            style = ttk.Style()
-            # Modern dark/light hybrid theme configuration
-            if SYS == "Windows":
-                style.theme_use("vista")
-            elif SYS == "Darwin":
-                style.theme_use("aqua")
-            else:
-                style.theme_use("clam")
-                
-            # Professional color palette
-            style.configure("TFrame", background="#ffffff")
-            style.configure("TLabel", background="#ffffff", font=("Segoe UI", 10))
-            style.configure("TButton", font=("Segoe UI", 9))
-            style.configure("Header.TLabel", font=("Segoe UI", 13, "bold"), foreground="#1a73e8", background="#ffffff")
-            style.configure("Treeview", font=("Segoe UI", 9), rowheight=28)
-            style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
-            style.map("TButton", background=[("active", "#e8f0fe")], foreground=[("active", "#1a73e8")])
             
             self.cfg = load_cfg()
             self.games, self.game, self.lib = [], None, None
@@ -893,8 +1177,9 @@ def run_gui(initial_user=None):
             self.v_dark = tk.BooleanVar(value=self.cfg.get("dark_mode", False))
             self.v_lower = tk.BooleanVar(value=self.cfg["lowercase"])
             self.v_policy = tk.StringVar(value=self.cfg["policy"])
+            
+            self._apply_theme() # Apply theme BEFORE building to set correct styles
             self._build()
-            self._apply_theme()
             self.after(100, lambda: self.detect(initial_user))
 
         def _apply_theme(self):
@@ -909,17 +1194,22 @@ def run_gui(initial_user=None):
             secondary_fg = "#888888" if dark else "#666666"
             
             style = ttk.Style()
-            # Theme reset for consistent colors
-            if SYS != "Windows":
+            # In Dark Mode, we use 'clam' even on Windows because 'vista/xpnative' doesn't support custom colors well
+            if dark:
                 style.theme_use("clam")
+            else:
+                if SYS == "Windows": style.theme_use("vista")
+                elif SYS == "Darwin": style.theme_use("aqua")
+                else: style.theme_use("clam")
                 
             style.configure("TFrame", background=bg)
-            style.configure("TLabel", background=bg, foreground=fg)
+            style.configure("TLabel", background=bg, foreground=fg, font=("Segoe UI", 10))
             style.configure("Secondary.TLabel", background=bg, foreground=secondary_fg, font=("Segoe UI", 9))
-            style.configure("Header.TLabel", background=bg, foreground=header_fg)
-            style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg)
+            style.configure("Header.TLabel", background=bg, foreground=header_fg, font=("Segoe UI", 13, "bold"))
+            style.configure("TButton", font=("Segoe UI", 9))
+            style.configure("Treeview", background=tree_bg, foreground=tree_fg, fieldbackground=tree_bg, font=("Segoe UI", 9), rowheight=28)
             style.configure("Treeview.Heading", background="#333333" if dark else "#f0f0f0", 
-                            foreground="#ffffff" if dark else "#000000", borderwidth=1)
+                            foreground="#ffffff" if dark else "#000000", borderwidth=1, font=("Segoe UI", 10, "bold"))
             style.map("TButton", background=[("active", btn_active)], foreground=[("active", header_fg)])
             
             # Additional styles for complete dark mode
@@ -958,15 +1248,18 @@ def run_gui(initial_user=None):
                                      highlightbackground="#444" if dark else "#ccc",
                                      borderwidth=0)
             
+            # Listbox/Text widgets need manual config as they are tk not ttk
             listbox_args = {"background": tree_bg, "foreground": tree_fg, 
                             "selectbackground": header_fg, "borderwidth": 0, "highlightthickness": 1,
                             "highlightbackground": "#444" if dark else "#ccc"}
-            if hasattr(self, "lb_prof"):
-                self.lb_prof.configure(**listbox_args)
-            if hasattr(self, "lb_bak"):
-                self.lb_bak.configure(**listbox_args)
-            if hasattr(self, "lb_vfiles"):
-                self.lb_vfiles.configure(**listbox_args)
+            for attr in ("lb_prof", "lb_bak", "lb_vfiles", "lb_games"):
+                if hasattr(self, attr):
+                    getattr(self, attr).configure(**listbox_args)
+
+            # Global tag configuration for text widgets if needed
+            if hasattr(self, "v_det"):
+                self.v_det.tag_configure("header", foreground=header_fg, font=("Segoe UI", 10, "bold"))
+                self.v_det.tag_configure("field", foreground=secondary_fg)
 
         # ---- construccion
         def _build(self):
@@ -987,7 +1280,7 @@ def run_gui(initial_user=None):
                     except ImportError:
                         self.banner_img = tk.PhotoImage(file=str(self.res / "banner-readme-v2.png"))
                     
-                    self.banner_lbl = tk.Label(self, image=self.banner_img, background="#ffffff", bd=0)
+                    self.banner_lbl = tk.Label(self, image=self.banner_img, bd=0)
                     self.banner_lbl.pack(fill="x", pady=(0, 5))
                 except Exception:
                     pass
@@ -1348,12 +1641,26 @@ def run_gui(initial_user=None):
                 self.refresh_all()
 
         def _text_window(self, title, text):
+            dark = self.v_dark.get()
+            bg = "#1e1e1e" if dark else "#ffffff"
+            fg = "#e0e0e0" if dark else "#000000"
             w = tk.Toplevel(self)
             w.title(title)
             w.geometry("720x460")
-            t = tk.Text(w, wrap="none")
+            w.configure(background=bg)
+            try:
+                if (self.res / "pluma.ico").exists():
+                    w.iconbitmap(str(self.res / "pluma.ico"))
+            except Exception: pass
+            t = tk.Text(w, wrap="none", background="#121212" if dark else "#ffffff", foreground=fg, 
+                        insertbackground=fg, borderwidth=0, highlightthickness=0)
             t.insert("1.0", text)
             t.configure(state="disabled")
+            sb_y = ttk.Scrollbar(w, orient="vertical", command=t.yview)
+            sb_x = ttk.Scrollbar(w, orient="horizontal", command=t.xview)
+            t.configure(yscrollcommand=sb_y.set, xscrollcommand=sb_x.set)
+            sb_y.pack(side="right", fill="y")
+            sb_x.pack(side="bottom", fill="x")
             t.pack(fill="both", expand=True)
 
         def show_files(self):
@@ -1370,10 +1677,20 @@ def run_gui(initial_user=None):
 
         def do_cleanup(self):
             if not self._need_lib(): return
-            if messagebox.askyesno("Clean Up", "This will delete all files in game folders that are NOT managed by any active mod. Continue?"):
-                count = self.guard(self.lib.cleanup)
-                self.log(f"✔ Cleaned up {count} unmanaged files.")
-                self.refresh_all()
+            preview = self.lib.cleanup_preview()
+            if not preview:
+                messagebox.showinfo("Clean Up", "No unmanaged files to remove (saves and characters are protected).")
+                return
+            sample = "\n".join(f"  {p}  ({s} bytes)" for p, s in preview[:20])
+            more = f"\n  ... and {len(preview) - 20} more" if len(preview) > 20 else ""
+            if not messagebox.askyesno("Clean Up Preview",
+                                       f"The following {len(preview)} unmanaged file(s) will be moved to a recovery folder "
+                                       f"(saves and characters are never touched):\n\n{sample}{more}\n\nContinue?"):
+                return
+            res = self.guard(self.lib.cleanup)
+            if isinstance(res, dict):
+                self.log(f"Cleaned up {res['count']} unmanaged files. Recovery: {res['trash']}")
+            self.refresh_all()
 
         # ---- Vault
         def bg(self, fn, ok, err=None):
@@ -1669,7 +1986,6 @@ def cli(argv):
 
 
 if __name__ == "__main__":
-    try:
-        cli(sys.argv[1:])
-    except Err as e:
-        sys.exit(f"Error: {e}")
+    from nwnmods.cli import main
+
+    main()
