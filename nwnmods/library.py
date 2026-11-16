@@ -51,7 +51,7 @@ class Library:
         for sub in CONTENT_DIRS:
             if sub in protect:
                 continue
-            d = self.user / sub
+            d = self.content_dir(sub)
             if not d.is_dir():
                 continue
             for f in d.rglob("*"):
@@ -78,7 +78,7 @@ class Library:
         for sub in CONTENT_DIRS:
             if sub in protect:
                 continue
-            d = self.user / sub
+            d = self.content_dir(sub)
             if not d.is_dir():
                 continue
             for f in sorted(d.rglob("*"), reverse=True):
@@ -110,7 +110,7 @@ class Library:
         return {"count": count, "trash": str(trash) if trash else None, "removed": removed}
 
     def _prune(self, rel: Path):
-        p = (self.user / rel).parent
+        p = self.content_path(rel).parent
         while p != self.user and len(p.relative_to(self.user).parts) > 1:
             try:
                 p.rmdir()
@@ -123,7 +123,7 @@ class Library:
         journal = []
         try:
             for src, rel in items:
-                key, tgt = rel.as_posix(), self.user / rel
+                key, tgt = rel.as_posix(), self.content_path(rel)
                 if tgt.exists() or tgt.is_symlink():
                     if action == "skip":
                         continue
@@ -210,7 +210,7 @@ class Library:
         m = self.mods[name]
         for key in m["files"]:
             rel = Path(key)
-            tgt = self.user / rel
+            tgt = self.content_path(rel)
             over = [n for n, o in self.mods.items()
                     if n != name and o["enabled"] and o["stash"].get(key) == name]
             if over:
@@ -359,7 +359,7 @@ class Library:
         d = self.original_snapshot_dir()
         d.mkdir(parents=True, exist_ok=True)
         for sub in CONTENT_DIRS:
-            src = self.user / sub
+            src = self.content_dir(sub)
             if src.is_dir():
                 dst = d / sub
                 if dst.exists():
@@ -378,7 +378,7 @@ class Library:
         # current files
         current = set()
         for sub in CONTENT_DIRS:
-            d = self.user / sub
+            d = self.content_dir(sub)
             if d.is_dir():
                 for f in d.rglob("*"):
                     if f.is_file():
@@ -402,7 +402,7 @@ class Library:
                 def h(p):
                     return hashlib.sha256(p.read_bytes()).hexdigest()
                 try:
-                    if h(self.user / rel) != h(orig / rel):
+                    if h(self.content_path(rel)) != h(orig / rel):
                         res.append((rel, "changed"))
                 except OSError:
                     pass
@@ -415,7 +415,7 @@ class Library:
         trash = self.base / "trash" / ("restore-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
         trash.mkdir(parents=True, exist_ok=True)
         for sub in CONTENT_DIRS:
-            src = self.user / sub
+            src = self.content_dir(sub)
             if src.is_dir():
                 dst = trash / sub
                 dst.parent.mkdir(parents=True, exist_ok=True)
@@ -424,7 +424,7 @@ class Library:
         orig = self.original_snapshot_dir()
         for sub in CONTENT_DIRS:
             src = orig / sub
-            dst = self.user / sub
+            dst = self.content_dir(sub)
             if src.is_dir():
                 shutil.copytree(src, dst)
         # clear mods? keep registry but mark? leave as is
@@ -435,7 +435,7 @@ class Library:
         owners = self.owners()
         out = []
         for sub in CONTENT_DIRS:
-            d = self.user / sub
+            d = self.content_dir(sub)
             if not d.is_dir():
                 continue
             for f in d.rglob("*"):
@@ -603,7 +603,7 @@ class Library:
             }
             z.writestr("mod.json", json.dumps(meta, indent=2, ensure_ascii=False))
             for rel in m.get("files", []):
-                src = self.user / rel
+                src = self.content_path(rel)
                 if src.is_file():
                     z.write(src, "files/" + rel)
         return dest
@@ -626,7 +626,7 @@ class Library:
             for info in z.infolist():
                 if info.filename.startswith("files/"):
                     rel = info.filename[len("files/"):]
-                    tgt = self.user / rel
+                    tgt = self.content_path(rel)
                     tgt.parent.mkdir(parents=True, exist_ok=True)
                     with z.open(info) as srcf, open(tgt, "wb") as dstf:
                         shutil.copyfileobj(srcf, dstf)
@@ -671,6 +671,30 @@ class Library:
         self.save()
         return pname
 
+
+    def _aliases(self):
+        try:
+            from .config import load_cfg as _lc
+            cfg = _lc()
+        except Exception:
+            try:
+                import nwnmods as _n
+                cfg = _n.load_cfg()
+            except Exception:
+                cfg = {}
+        return cfg.get("folder_aliases") or {}
+
+    def content_dir(self, sub):
+        a = self._aliases().get(sub)
+        return Path(a) if a else (self.user / sub)
+
+    def content_path(self, rel):
+        rel = Path(rel)
+        parts = rel.parts
+        if parts and parts[0] in self._aliases():
+            return Path(self._aliases()[parts[0]]) / Path(*parts[1:]) if len(parts) > 1 else Path(self._aliases()[parts[0]])
+        return self.user / rel
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
@@ -682,7 +706,7 @@ class Library:
     def scan(self, category=None):
         owners, rows = self.owners(), []
         for sub in ([category] if category else CONTENT_DIRS):
-            d = self.user / sub
+            d = self.content_dir(sub)
             if not d.is_dir():
                 continue
             for f in sorted(d.rglob("*")):
@@ -711,7 +735,7 @@ class Library:
         n = 0
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
             for sub in folders:
-                for f in (self.user / sub).rglob("*") if (self.user / sub).is_dir() else []:
+                for f in (self.content_dir(sub)).rglob("*") if (self.content_dir(sub)).is_dir() else []:
                     if f.is_file():
                         z.write(f, f.relative_to(self.user).as_posix())
                         n += 1
@@ -746,7 +770,7 @@ class Library:
         rows = []
         active = self.d.get("active_save_mod")
         for sub in self.PARTY_FOLDERS:
-            d = self.user / sub
+            d = self.content_dir(sub)
             if d.is_dir():
                 for f in d.rglob("*"):
                     if f.is_file():
@@ -783,7 +807,7 @@ class Library:
         stash_dir = self._save_set_dir(active_key)
         stash_dir.mkdir(parents=True, exist_ok=True)
         for sub in self.PARTY_FOLDERS:
-            src = self.user / sub
+            src = self.content_dir(sub)
             dst = stash_dir / sub
             if src.is_dir():
                 dst.parent.mkdir(parents=True, exist_ok=True)
@@ -807,7 +831,7 @@ class Library:
         new_dir = self._save_set_dir(mod)
         for sub in self.PARTY_FOLDERS:
             src = new_dir / sub
-            dst = self.user / sub
+            dst = self.content_dir(sub)
             if src.is_dir():
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 if dst.exists():

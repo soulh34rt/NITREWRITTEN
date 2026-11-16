@@ -43,6 +43,10 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    al = sp.add_parser("alias"); als = al.add_subparsers(dest="alias_cmd")
+    als.add_parser("list")
+    aset = als.add_parser("set"); aset.add_argument("sub"); aset.add_argument("path")
+    arm = als.add_parser("remove"); arm.add_argument("sub")
     ex = sp.add_parser("export"); ex.add_argument("name"); ex.add_argument("dest")
     im = sp.add_parser("import"); im.add_argument("file"); im.add_argument("--name")
     ep = sp.add_parser("export-profile"); ep.add_argument("name"); ep.add_argument("dest")
@@ -199,6 +203,18 @@ def cli(argv):
         p = lib.export_profile(a.name, a.dest); print(f"[OK] exported profile: {p}")
     elif a.cmd == "import-profile":
         n = lib.import_profile(a.file, a.name); print(f"[OK] imported profile: {n}")
+    elif a.cmd == "alias":
+        ac = getattr(a, "alias_cmd", None)
+        cfg = load_cfg()
+        cfg.setdefault("folder_aliases", {})
+        if ac == "list" or ac is None:
+            print(cfg["folder_aliases"])
+        elif ac == "set":
+            cfg["folder_aliases"][a.sub] = a.path
+            save_cfg(cfg); print(f"[OK] alias {a.sub} -> {a.path}")
+        elif ac == "remove":
+            cfg["folder_aliases"].pop(a.sub, None)
+            save_cfg(cfg); print(f"[OK] alias removed: {a.sub}")
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":
