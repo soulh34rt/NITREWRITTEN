@@ -497,3 +497,39 @@ def test_cli_chars_and_portraits(tmp_path):
                         cwd=root, capture_output=True, text=True)
     assert r2.returncode == 0, r2.stderr
     assert "po_a.tga" in r2.stdout
+
+def test_undeploy_rollback_on_failure(lib, user_dir, tmp_path, monkeypatch):
+    # two files so the failure lands mid-operation
+    z = tmp_path / "rb.zip"
+    make_zip(z, [("hak/one.hak", b"1"), ("hak/two.hak", b"2")])
+    lib.install(z, name="rb")
+
+    import nwnmods.library as libmod
+    real_move = libmod.shutil.move
+    state = {"n": 0}
+
+    def flaky(src, dst, *a, **k):
+        state["n"] += 1
+        if state["n"] == 2:  # first undeploy move ok, second fails
+            raise OSError("disk full")
+        return real_move(src, dst, *a, **k)
+
+    monkeypatch.setattr(libmod.shutil, "move", flaky)
+    with pytest.raises(OSError):
+        lib.remove("rb")
+    monkeypatch.setattr(libmod.shutil, "move", real_move)
+
+    # rollback restored the first file; the mod is still registered
+    assert "rb" in lib.mods
+    assert (user_dir / "hak" / "one.hak").read_bytes() == b"1"
+    assert (user_dir / "hak" / "two.hak").read_bytes() == b"2"
+
+
+def test_remove_parks_files_in_trash(lib, user_dir, tmp_path):
+    z = tmp_path / "tr.zip"
+    make_zip(z, [("hak/tr.hak", b"x")])
+    lib.install(z, name="tr")
+    lib.remove("tr")
+    assert not (user_dir / "hak" / "tr.hak").exists()
+    trash = list((user_dir / ".nwnmods" / "trash").glob("undeploy-tr-*/hak/tr.hak"))
+    assert trash and trash[0].read_bytes() == b"x"

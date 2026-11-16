@@ -1205,40 +1205,78 @@ class Library:
 
     def _undeploy(self, name, keep=None):
         m = self.mods[name]
-        for key in m["files"]:
-            rel = Path(key)
-            tgt = self.content_path(rel)
-            over = [n for n, o in self.mods.items()
-                    if n != name and o["enabled"] and o["stash"].get(key) == name]
-            if over:  # another mod overwrote this file; the version of 'name' is in its stash
-                if keep:
-                    src = self.base / "stash" / over[0] / rel
-                    if src.exists():
+        journal = []
+        trash_root = None
+        try:
+            for key in m["files"]:
+                rel = Path(key)
+                tgt = self.content_path(rel)
+                over = [n for n, o in self.mods.items()
+                        if n != name and o["enabled"] and o["stash"].get(key) == name]
+                if over:  # another mod overwrote this file; the version of 'name' is in its stash
+                    if keep:
+                        src = self.base / "stash" / over[0] / rel
+                        if src.exists():
+                            (keep / rel).parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(src, keep / rel)
+                            journal.append(("copy", keep / rel, None))
+                    continue
+                if tgt.exists():
+                    if keep:
                         (keep / rel).parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(src, keep / rel)
-                continue
-            if tgt.exists():
-                if keep:
-                    (keep / rel).parent.mkdir(parents=True, exist_ok=True)
-                    shutil.move(str(tgt), str(keep / rel))
-                else:
-                    tgt.unlink()
-            sp = self.base / "stash" / name / rel
-            if key in m["stash"] and sp.exists():
-                tgt.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(sp), str(tgt))
-            self._prune(rel)
+                        shutil.move(str(tgt), str(keep / rel))
+                        journal.append(("move", tgt, keep / rel))
+                    else:
+                        # destructive: park the file in trash instead of deleting it
+                        if trash_root is None:
+                            trash_root = self.base / "trash" / f"undeploy-{name}-{datetime.now():%Y%m%d-%H%M%S}"
+                        dest = trash_root / rel
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(tgt), str(dest))
+                        journal.append(("move", tgt, dest))
+                sp = self.base / "stash" / name / rel
+                if key in m["stash"] and sp.exists():
+                    tgt.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(sp), str(tgt))
+                    journal.append(("move", sp, tgt))
+                self._prune(rel)
+        except Exception:
+            for entry in reversed(journal):
+                try:
+                    if entry[0] == "move":
+                        _, src_fwd, dst_fwd = entry
+                        if Path(dst_fwd).exists():
+                            Path(src_fwd).parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(dst_fwd), str(src_fwd))
+                    else:
+                        _, copy_dst, _ = entry
+                        Path(copy_dst).unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
 
     def disable(self, name, force_deps=False):
         m = self._get(name)
         if not m["enabled"]:
             return
         self.check_dependents_for_disable(name, force=force_deps)
-        self._undeploy(name, keep=self.base / "disabled" / name)
+        keep = self.base / "disabled" / name
+        self._undeploy(name, keep=keep)
         self._relink(name)
         m["enabled"], m["stash"] = False, {}
+        try:
+            self.save()
+        except Exception:
+            # rollback: redeploy the files from the disabled folder
+            m["enabled"] = True
+            items = [(f, f.relative_to(keep)) for f in sorted(keep.rglob("*"))
+                     if f.is_file()] if keep.exists() else []
+            if items:
+                files, stash = self._deploy(name, items, "overwrite", self.owners())
+                m.update(files=files, stash=stash)
+                shutil.rmtree(keep, ignore_errors=True)
+            raise
         shutil.rmtree(self.base / "stash" / name, ignore_errors=True)
-        self.save()
 
     def enable(self, name, on_conflict=None, force_deps=False):
         m = self._get(name)
@@ -1254,21 +1292,44 @@ class Library:
             action = on_conflict(conflicts) if on_conflict else "cancel"
             if action != "overwrite":
                 raise Err("Activation canceled due to conflicts.")
+        prev = {"files": list(m.get("files", [])), "stash": dict(m.get("stash", {}))}
         files, stash = self._deploy(name, items, "overwrite", self.owners())
         m.update(files=files, stash=stash, enabled=True)
+        try:
+            self.save()
+        except Exception:
+            try:
+                self._undeploy(name, keep=d)
+            except Exception:
+                pass
+            m.update(files=prev["files"], stash=prev["stash"], enabled=False)
+            raise
         shutil.rmtree(d, ignore_errors=True)
-        self.save()
 
     def remove(self, name, force_deps=False):
         m = self._get(name)
+        snapshot = json.loads(json.dumps(m))
         if m["enabled"]:
             self.check_dependents_for_disable(name, force=force_deps)
             self._undeploy(name)
-        shutil.rmtree(self.base / "disabled" / name, ignore_errors=True)
         self._relink(name)
-        shutil.rmtree(self.base / "stash" / name, ignore_errors=True)
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        for d in (self.base / "disabled" / name, self.base / "stash" / name):
+            if d.exists():
+                trash = self.base / "trash" / f"remove-{name}-{ts}" / d.name
+                try:
+                    trash.parent.mkdir(parents=True, exist_ok=True)
+                    if trash.exists():
+                        shutil.rmtree(trash, ignore_errors=True)
+                    shutil.move(str(d), str(trash))
+                except OSError:
+                    shutil.rmtree(d, ignore_errors=True)
         del self.mods[name]
-        self.save()
+        try:
+            self.save()
+        except Exception:
+            self.mods[name] = snapshot
+            raise
 
     def _relink(self, name):
         """Another mod Y overwrote files from 'name': Y inherits what 'name' had stashed underneath."""
