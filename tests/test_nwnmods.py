@@ -292,3 +292,20 @@ def test_adopt_files(lib, user_dir):
     assert n == "adopted"
     assert "adopted" in lib.mods
     assert "hak/x.hak" in lib.mods["adopted"]["files"]
+
+
+def test_mod_metadata(lib, tmp_path):
+    import zipfile
+    z = tmp_path / "m.zip"
+    with zipfile.ZipFile(z, "w") as zf:
+        zf.writestr("hak/m.hak", b"x")
+    lib.install(z, name="m")
+    lib.set_notes("m", "hello notes")
+    lib.set_rating("m", 4)
+    lib.set_meta("m", author="me", version="1.0", vault_url="http://x")
+    m = lib.mods["m"]
+    assert m["notes"] == "hello notes"
+    assert m["rating"] == 4
+    assert m["author"] == "me"
+    assert m["version"] == "1.0"
+    assert m["vault_url"] == "http://x"

@@ -43,6 +43,10 @@ def cli(argv):
     sp.add_parser("restore-original")
     sp.add_parser("changed")
     sp.add_parser("unmanaged")
+    nt = sp.add_parser("note"); nt.add_argument("name"); nt.add_argument("text", nargs="+")
+    rt = sp.add_parser("rate"); rt.add_argument("name"); rt.add_argument("value")
+    mt = sp.add_parser("meta"); mt.add_argument("name")
+    se = sp.add_parser("search"); se.add_argument("query")
     # saves manager
     sv = sp.add_parser("saves")
     ssv = sv.add_subparsers(dest="saves_cmd")
@@ -102,6 +106,28 @@ def cli(argv):
     elif a.cmd == "unmanaged":
         for f in lib.unmanaged_files():
             print(f)
+    elif a.cmd == "note":
+        lib.set_notes(a.name, " ".join(a.text))
+        print(f"[OK] notes saved for {a.name}")
+    elif a.cmd == "rate":
+        lib.set_rating(a.name, a.value)
+        print(f"[OK] rating saved for {a.name}")
+    elif a.cmd == "meta":
+        m = lib.mods[a.name]
+        print(f"Name: {a.name}")
+        print(f"Requires: {m.get('requires')}")
+        print(f"Author: {m.get('author')}")
+        print(f"Version: {m.get('version')}")
+        print(f"Rating: {m.get('rating')}")
+        print(f"Vault URL: {m.get('vault_url')}")
+        print(f"Notes: {m.get('notes')}")
+        print(f"Files: {len(m.get('files', []))}")
+    elif a.cmd == "search":
+        q = a.query.lower()
+        for n, m in lib.mods.items():
+            hay = f"{n} {m.get('notes','')} {m.get('author','')} {m.get('vault_url','')}".lower()
+            if q in hay:
+                print(f"{'[ON]' if m.get('enabled') else '[OFF]'} {n}  (rating {m.get('rating',0)})")
     elif a.cmd == "launch":
         launch(g)
     elif a.cmd == "saves":

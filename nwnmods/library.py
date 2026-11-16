@@ -445,6 +445,28 @@ class Library:
         self.save()
         return name
 
+
+    def set_notes(self, name, notes):
+        self._get(name)["notes"] = notes or ""
+        self.save()
+
+    def set_rating(self, name, rating):
+        try:
+            r = int(rating)
+        except (TypeError, ValueError):
+            raise Err("Rating must be an integer.")
+        if r < 0 or r > 5:
+            raise Err("Rating must be 0-5.")
+        self._get(name)["rating"] = r
+        self.save()
+
+    def set_meta(self, name, **kwargs):
+        m = self._get(name)
+        for k in ("notes", "rating", "vault_url", "author", "version"):
+            if k in kwargs and kwargs[k] is not None:
+                m[k] = kwargs[k]
+        self.save()
+
     def conflicts_report(self) -> dict:
         seen = {}
         for n, m in self.mods.items():
