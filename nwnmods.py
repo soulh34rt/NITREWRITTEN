@@ -70,7 +70,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -533,8 +533,8 @@ def extract(src: Path, out: Path):
                 return
         raise Err("Could not open .rar archive. Install unrar/bsdtar or rarfile.")
 
-    # fallback external 7z for unknown archives
-    tools = ["7z", "7zz", "7za", "7zr"]
+    # fallback external tools for unknown/self-extracting archives
+    tools = ["7z", "7zz", "7za", "7zr", "innounp", "unzip", "bsdtar"]
     if SYS == "Windows":
         for pf in ("ProgramFiles", "ProgramFiles(x86)"):
             if os.environ.get(pf):
@@ -2047,6 +2047,10 @@ def run_gui(initial_user=None):
             self.cfg["lowercase"], self.cfg["policy"] = self.v_lower.get(), self.v_policy.get()
             self.cfg["dark_mode"] = self.v_dark.get()
             self.cfg["convert_bik"] = self.v_convert_bik.get()
+            if self.game is not None:
+                ip = self.cfg.setdefault("installations", {}).setdefault(str(self.game.root), {})
+                ip["lowercase"] = self.v_lower.get()
+                ip["policy"] = self.v_policy.get()
             save_cfg(self.cfg)
             self._apply_theme()
 
@@ -2101,6 +2105,9 @@ def run_gui(initial_user=None):
             self.cfg["last"] = str(self.game.root)
             save_cfg(self.cfg)
             self.status_left.configure(text=f"Game data: {self.game.user}")
+            ip = self.cfg.setdefault("installations", {}).setdefault(str(self.game.root), {})
+            self.v_lower.set(ip.get("lowercase", self.cfg.get("lowercase", True)))
+            self.v_policy.set(ip.get("policy", self.cfg.get("policy", "ask")))
             want = "NWN 1" if self.game.edition == "Diamond" else "NWN:EE"
             if not self.vault_items:
                 self.v_game.set(want)

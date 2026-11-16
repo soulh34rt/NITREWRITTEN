@@ -180,7 +180,7 @@ def extract(src: Path, out: Path):
             return
         except ImportError:
             pass
-        tools = ["7z", "7zz", "7za", "7zr"]
+        tools = ["7z", "7zz", "7za", "7zr", "innounp", "unzip", "bsdtar"]
         if SYS == "Windows":
             for pf in ("ProgramFiles", "ProgramFiles(x86)"):
                 if os.environ.get(pf):
@@ -225,7 +225,7 @@ def extract(src: Path, out: Path):
                 return
         raise Err("Could not open .rar archive. Install unrar/bsdtar or rarfile.")
 
-    tools = ["7z", "7zz", "7za", "7zr"]
+    tools = ["7z", "7zz", "7za", "7zr", "innounp", "unzip", "bsdtar"]
     if SYS == "Windows":
         for pf in ("ProgramFiles", "ProgramFiles(x86)"):
             if os.environ.get(pf):
