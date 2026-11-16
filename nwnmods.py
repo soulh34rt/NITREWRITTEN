@@ -575,7 +575,7 @@ def parse_project(html: str, url: str) -> dict:
             label = _norm(htmlmod.unescape(re.sub(r"<[^>]+>", "", m.group(2))))
             if href not in seen:
                 seen.add(href)
-                files.append({"url": href, "name": label or Path(urlparse(href).path).name or "archivo"})
+                files.append({"url": href, "name": label or Path(urlparse(href).path).name or "file"})
     m = re.search(r'src="([^"]*/files/(?:styles/[^/"]+/public/)?project/\d+/images/[^"]+)"', html)
     image = urljoin(url, htmlmod.unescape(m.group(1))) if m else None
     return {"title": title, "url": url, "desc": desc, "fields": fields, "files": files, "image": image}
@@ -696,7 +696,7 @@ class Library:
             tgt = self.user / rel
             over = [n for n, o in self.mods.items()
                     if n != name and o["enabled"] and o["stash"].get(key) == name]
-            if over:  # otro mod sobrescribio este archivo; la version de 'name' esta en su stash
+            if over:  # another mod overwrote this file; the version of 'name' is in its stash
                 if keep:
                     src = self.base / "stash" / over[0] / rel
                     if src.exists():
