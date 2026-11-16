@@ -145,6 +145,11 @@ def find_7zip():
         return _SEVENZIP_PATH, _SEVENZIP_SOURCE
     for p, src in _sevenzip_candidates():
         if p and Path(p).is_file():
+            try:
+                if platform.system() != 'Windows':
+                    os.chmod(p, 0o755)
+            except Exception:
+                pass
             _SEVENZIP_PATH = str(p)
             _SEVENZIP_SOURCE = src
             return _SEVENZIP_PATH, _SEVENZIP_SOURCE
