@@ -34,6 +34,8 @@ Built with a focus on simplicity and reliability, it keeps your game clean while
 - **Character explorer & portraits**: browse `localvault` characters and portraits.
 - **Playtime log**: tracks your play time per mod (recovered after a crash).
 - **NWN log review**: after launching the game, errors found in the NWN log are reported.
+- **Game start screen**: change the NWN:EE main menu background (`gui_pre_bknd3`) from Settings; the previous image is always kept in `.nwnmods/trash/`.
+- **App splash screen**: optional image shown while the app starts (configure it in Settings or with the `splash` command).
 - **Basic mode**: a minimal Install / Play / Quit launcher (switch to Advanced anytime).
 
 ---
@@ -84,6 +86,8 @@ Everything the GUI does is also available from the terminal (`python nwnmods.py 
 | `note` / `rate` / `meta` | Edit mod metadata |
 | `group` | Create and manage mod groups |
 | `saves` | List, switch, archive or restore save sets per mod |
+| `startscreen` | Show, set or restore the game start screen (`status`, `set <image>`, `restore`) |
+| `splash` | Configure the app splash screen (`status`, `set <image>`, `ms <n>`, `off`) |
 | `chars` / `portraits` | Browse characters and portraits |
 | `playtime` | Show playtime report per mod |
 | `workshop list` / `workshop import` | Steam Workshop items (EE) |
