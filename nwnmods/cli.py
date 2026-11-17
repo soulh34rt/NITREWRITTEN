@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 
 from ._common import Err
 from .config import load_cfg, save_cfg
@@ -91,6 +92,15 @@ def cli(argv):
     ssss = sssv.add_parser("set")
     ssss.add_argument("image")
     sssv.add_parser("restore")
+    # App splash screen
+    spl = sp.add_parser("splash")
+    spls = spl.add_subparsers(dest="spl_cmd")
+    spls.add_parser("status")
+    splset = spls.add_parser("set")
+    splset.add_argument("image")
+    spls.add_parser("off")
+    splms = spls.add_parser("ms")
+    splms.add_argument("value", type=int)
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
         return run_gui(a.user)
@@ -280,6 +290,30 @@ def cli(argv):
             else:
                 print("Start screen: game default (no custom image)")
             print(f"Target: {lib.start_screen_path()}")
+    elif a.cmd == "splash":
+        sc = getattr(a, "spl_cmd", None)
+        cfg = load_cfg()
+        if sc == "set":
+            p = Path(a.image)
+            if not p.exists():
+                raise Err(f"Image not found: {p}")
+            cfg["splash_image"] = str(p)
+            cfg["splash_enabled"] = True
+            save_cfg(cfg)
+            print(f"[OK] splash image set: {p}")
+        elif sc == "off":
+            cfg["splash_enabled"] = False
+            save_cfg(cfg)
+            print("[OK] splash disabled")
+        elif sc == "ms":
+            cfg["splash_ms"] = max(0, a.value)
+            save_cfg(cfg)
+            print(f"[OK] splash duration: {cfg['splash_ms']} ms")
+        else:
+            state = "on" if cfg.get("splash_enabled") else "off"
+            print(f"Splash: {state}")
+            print(f"Image: {cfg.get('splash_image') or '(none)'}")
+            print(f"Duration: {cfg.get('splash_ms', 2000)} ms")
 
 
 def main(argv=None):

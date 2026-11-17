@@ -586,7 +586,15 @@ def test_start_screen_missing_image_errors(lib):
         lib.set_start_screen(Path("/nonexistent/img.png"))
 
 
-def test_cli_startscreen(tmp_path):
+def test_config_splash_defaults(tmp_path, monkeypatch):
+    monkeypatch.setattr(nwnmods, "CFG", tmp_path / "nope.json")
+    cfg = nwnmods.load_cfg()
+    assert cfg["splash_enabled"] is False
+    assert cfg["splash_image"] is None
+    assert cfg["splash_ms"] == 2000
+
+
+def test_cli_startscreen_and_splash(tmp_path):
     root = Path(__file__).resolve().parents[1]
     user = tmp_path / "userdata"
     (user / "override").mkdir(parents=True)
@@ -615,3 +623,20 @@ def test_cli_startscreen(tmp_path):
                        cwd=root, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert not (user / "override" / "gui_pre_bknd3.tga").exists()
+
+    # splash config commands (redirect config dir so the real config is untouched)
+    env = dict(os.environ)
+    env["APPDATA"] = str(tmp_path / "appdata")
+    env["XDG_CONFIG_HOME"] = str(tmp_path / "xdg")
+    env["HOME"] = str(tmp_path / "home")
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user),
+                        "splash", "set", str(img)],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "splash", "status"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    assert "splash: on" in r.stdout.lower()
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "splash", "off"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr

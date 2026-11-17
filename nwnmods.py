@@ -70,7 +70,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False, "splash_enabled": False, "splash_image": None, "splash_ms": 2000}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -2163,6 +2163,54 @@ class Library:
 
 
 # --------------------------------------------------------------------------- GUI
+_splash_shown = False
+
+
+def _show_splash(root, cfg):
+    """Show the startup splash as a Toplevel over `root`; returns it or None.
+
+    The window closes itself after cfg['splash_ms'] milliseconds (<=0 = no
+    auto-close is treated as "no splash"). Never raises: a broken image or
+    display problem must not block the app.
+    """
+    global _splash_shown
+    if _splash_shown or not cfg.get("splash_enabled"):
+        return None
+    ms = int(cfg.get("splash_ms", 2000) or 2000)
+    if ms <= 0:
+        return None
+    img_path = cfg.get("splash_image") or ""
+    if not img_path:
+        return None
+    p = Path(img_path)
+    if not p.exists():
+        return None
+    try:
+        from PIL import Image, ImageTk
+        root.withdraw()
+        win = tk.Toplevel(root)
+        win.overrideredirect(True)
+        img = Image.open(p)
+        img.thumbnail((1024, 768))
+        photo = ImageTk.PhotoImage(img)
+        lbl = tk.Label(win, image=photo, bd=0)
+        lbl.image = photo
+        lbl.pack()
+        win.update_idletasks()
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        w, h = win.winfo_width(), win.winfo_height()
+        win.geometry(f"+{(sw - w) // 2}+{(sh - h) // 2}")
+        win.after(ms, lambda: (win.destroy(), root.deiconify()))
+        _splash_shown = True
+        return win
+    except Exception:  # noqa: BLE001
+        try:
+            root.deiconify()
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+
 def run_gui(initial_user=None):
     class App(tk.Tk):
         def __init__(self):
@@ -2518,6 +2566,21 @@ def run_gui(initial_user=None):
             ttk.Button(bf, text="Restore original", command=self.startscreen_restore_ui).pack(side="left")
             self.refresh_startscreen_label()
 
+            # ---- App splash screen
+            ttk.Label(p, text="App splash screen on startup:",
+                      font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(15, 3))
+            self.v_splash = tk.BooleanVar(value=load_cfg().get("splash_enabled", False))
+            ttk.Checkbutton(p, text="Show splash window when the app starts",
+                            variable=self.v_splash,
+                            command=self.save_settings).pack(anchor="w", pady=2)
+            sf = ttk.Frame(p)
+            sf.pack(anchor="w", pady=4)
+            ttk.Button(sf, text="Choose splash image...", command=self.splash_choose_ui).pack(side="left", padx=(0, 6))
+            ttk.Button(sf, text="Clear", command=self.splash_clear_ui).pack(side="left")
+            self.lbl_splash = ttk.Label(p, text="", style="Secondary.TLabel")
+            self.lbl_splash.pack(anchor="w", pady=2)
+            self.refresh_splash_label()
+
         # ---- utilidades
         def log(self, msg):
             self.logbox.configure(state="normal")
@@ -2544,6 +2607,8 @@ def run_gui(initial_user=None):
             self.cfg["lowercase"], self.cfg["policy"] = self.v_lower.get(), self.v_policy.get()
             self.cfg["dark_mode"] = self.v_dark.get()
             self.cfg["convert_bik"] = self.v_convert_bik.get()
+            if hasattr(self, "v_splash"):
+                self.cfg["splash_enabled"] = bool(self.v_splash.get())
             if self.game is not None:
                 ip = self.cfg.setdefault("installations", {}).setdefault(str(self.game.root), {})
                 ip["lowercase"] = self.v_lower.get()
@@ -2590,6 +2655,35 @@ def run_gui(initial_user=None):
             if self.guard(self.lib.restore_start_screen):
                 self.log("Custom start screen removed (kept in .nwnmods/trash/)")
                 self.refresh_startscreen_label()
+
+        def refresh_splash_label(self):
+            if not hasattr(self, "lbl_splash"):
+                return
+            cfg = load_cfg()
+            img = cfg.get("splash_image") or "(none)"
+            ms = cfg.get("splash_ms", 2000)
+            self.lbl_splash.configure(text=f"Image: {img}  |  {ms} ms")
+
+        def splash_choose_ui(self):
+            p = filedialog.askopenfilename(
+                title="Select splash image",
+                filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.gif"), ("All files", "*.*")])
+            if not p:
+                return
+            cfg = load_cfg()
+            cfg["splash_image"] = str(p)
+            cfg["splash_enabled"] = True
+            save_cfg(cfg)
+            if hasattr(self, "v_splash"):
+                self.v_splash.set(True)
+            self.log(f"Splash image set: {p}")
+            self.refresh_splash_label()
+
+        def splash_clear_ui(self):
+            cfg = load_cfg()
+            cfg["splash_image"] = None
+            save_cfg(cfg)
+            self.refresh_splash_label()
 
         def ask_conflict(self, conf):
             pol = self.v_policy.get()
@@ -3124,6 +3218,7 @@ def run_gui(initial_user=None):
     if cfg.get("basic_mode"):
         # Minimal launcher window
         root = tk.Tk()
+        _show_splash(root, cfg)
         root.title("NitRewritten - Basic")
         root.geometry("320x180")
         ttk.Label(root, text="NitRewritten", font=("Segoe UI", 14, "bold")).pack(pady=10)
@@ -3139,7 +3234,9 @@ def run_gui(initial_user=None):
             setup_7zip()
         except Exception:
             pass
-        App().mainloop()
+        app = App()
+        _show_splash(app, cfg)
+        app.mainloop()
 
 
 # --------------------------------------------------------------------------- CLI
