@@ -43,6 +43,33 @@ APP = "nwnmods"
 STEAM_APPID_EE = "704450"
 UA = "nwnmods/1.0 (personal mod manager)"
 
+# Mod list states: single source of truth for the GUI (both themes).
+# Each entry is (foreground, background), WCAG contrast >= 4.5:1 (tested).
+STATE_SYMBOLS = {"active": "●", "disabled": "○", "conflict": "▲"}  # ● ○ ▲
+STATE_LABELS = {"active": "Active", "disabled": "Disabled", "conflict": "Conflict"}
+STATE_COLORS = {
+    "dark": {"active": ("#4CAF50", "#1E2F22"), "disabled": ("#8A8A8A", "#121212"),
+             "conflict": ("#E6C84A", "#2F2A12")},
+    "light": {"active": ("#2E7D32", "#FFFFFF"), "disabled": ("#000000", "#ECECEC"),
+              "conflict": ("#8A6D00", "#FFF8E1")},
+}
+
+
+def mod_state(enabled: bool, conflict: bool) -> str:
+    """State key for a mod row: disabled beats conflict (inactive mods never conflict)."""
+    if not enabled:
+        return "disabled"
+    return "conflict" if conflict else "active"
+
+
+def conflict_partners(report: dict) -> dict:
+    """Map each active mod to the set of active mods it shares files with."""
+    partners = {}
+    for ns in report.values():
+        for n in ns:
+            partners.setdefault(n, set()).update(x for x in ns if x != n)
+    return partners
+
 
 class Err(Exception):
     pass
@@ -2256,6 +2283,8 @@ def run_gui(initial_user=None):
             dark = self.v_dark.get()
             bg = "#1E1E1E" if dark else "#ffffff"
             panel = "#252526" if dark else "#f3f3f3"
+            self._panel_bg = panel
+            self._state_palette = STATE_COLORS["dark" if dark else "light"]
             fg = "#E0E0E0" if dark else "#000000"
             header_fg = "#4DA3FF" if dark else "#1a73e8"
             btn_bg = "#333337" if dark else "#e1e1e1"
@@ -2331,6 +2360,14 @@ def run_gui(initial_user=None):
                 self.v_det.tag_configure("header", foreground=header_fg, font=("Segoe UI", 12, "bold"))
                 self.v_det.tag_configure("field", foreground=secondary_fg)
 
+            # Mod list state colors (STATE_COLORS is the single source of truth)
+            if hasattr(self, "tv_mods"):
+                self._config_mod_tags()
+                self._update_mod_mark()
+            if hasattr(self, "_legend_labels"):
+                for st, lbl in self._legend_labels.items():
+                    lbl.configure(fg=self._state_palette[st][0], bg=panel)
+
         # ---- construccion
         def _build(self):
             # Toolbar (28px): icon + name, installation selector, actions
@@ -2398,10 +2435,50 @@ def run_gui(initial_user=None):
                 tv.heading(c, text=c.capitalize())
                 tv.column(c, width=w, anchor="w")
             sb = ttk.Scrollbar(fr, command=tv.yview)
-            tv.configure(yscrollcommand=sb.set)
+
+            def _onscroll(*a):
+                sb.set(*a)
+                if tv is getattr(self, "tv_mods", None):
+                    self._update_mod_mark()
+
+            tv.configure(yscrollcommand=_onscroll)
             tv.pack(side="left", fill="both", expand=True)
             sb.pack(side="right", fill="y")
             return tv
+
+        # ---- mod list state colors (single source of truth: STATE_COLORS)
+        def _config_mod_tags(self):
+            for st, (fg_c, bg_c) in self._state_palette.items():
+                self.tv_mods.tag_configure(st, foreground=fg_c, background=bg_c)
+            # Selected rows keep the blue selection; the state mark shows on the left.
+            self.tv_mods.tag_configure("sel", background="#264F78", foreground="#ffffff")
+
+        def _mods_select(self, _e=None):
+            tv = self.tv_mods
+            sel = set(tv.selection())
+            for iid in tv.get_children():
+                tags = [t for t in tv.item(iid, "tags") if t != "sel"]
+                if iid in sel:
+                    tags.append("sel")
+                if list(tv.item(iid, "tags")) != tags:
+                    tv.item(iid, tags=tags)
+            self._update_mod_mark()
+
+        def _update_mod_mark(self):
+            """State-color strip on the left edge of the selected mod row."""
+            mark = getattr(self, "_state_mark", None)
+            if mark is None:
+                return
+            sel = self.tv_mods.selection()
+            bb = self.tv_mods.bbox(sel[0]) if sel else None
+            if not bb:
+                mark.place_forget()
+                return
+            x, y, _w, h = bb
+            tags = self.tv_mods.item(sel[0], "tags")
+            state = next((t for t in tags if t in STATE_LABELS), "active")
+            mark.configure(bg=self._state_palette[state][0])
+            mark.place(x=x, y=y, width=4, height=h)
 
         def _build_mods(self):
             p = self.tab_mods
@@ -2409,7 +2486,7 @@ def run_gui(initial_user=None):
                            ("Install URL...", self.install_url), ("Enable", self.enable),
                            ("Disable", self.disable), ("Uninstall", self.remove),
                            ("View Files", self.show_files), ("Conflicts", self.show_conflicts)))
-            
+
             filter_frame = ttk.Frame(p)
             filter_frame.pack(fill="x", pady=(0, 8))
             ttk.Label(filter_frame, text="Search: ", style="Secondary.TLabel").pack(side="left")
@@ -2417,11 +2494,27 @@ def run_gui(initial_user=None):
             e = ttk.Entry(filter_frame, textvariable=self.q_mods)
             e.pack(side="left", fill="x", expand=True)
             self.q_mods.trace_add("write", lambda *a: self.refresh_mods())
-            
+
+            # Legend under the table (packed bottom-first so the tree fills above it)
+            leg = ttk.Frame(p)
+            leg.pack(fill="x", side="bottom", pady=(4, 0))
+            self._legend_labels = {}
+            for st in ("active", "disabled", "conflict"):
+                lbl = tk.Label(leg, text=f"{STATE_SYMBOLS[st]} {STATE_LABELS[st]}",
+                               fg=self._state_palette[st][0], bg=self._panel_bg,
+                               font=("Segoe UI", 10))
+                lbl.pack(side="left", padx=(0, 14))
+                self._legend_labels[st] = lbl
+
             self.tv_mods = self._tree(p, ("name", "status", "files", "date", "source"),
-                                      (260, 100, 80, 100, 380))
+                                      (260, 150, 70, 100, 340))
             for c in ("name", "status", "files", "date", "source"):
                 self.tv_mods.heading(c, text=c.title())
+            self._config_mod_tags()
+            self.tv_mods.bind("<<TreeviewSelect>>", self._mods_select)
+            # Small state-color strip drawn over the left edge of the selected row
+            self._state_mark = tk.Frame(self.tv_mods.master, width=4, highlightthickness=0)
+            self._state_mark.place_forget()
 
         def _build_content(self):
             p = self.tab_cont
@@ -2795,14 +2888,23 @@ def run_gui(initial_user=None):
         def refresh_mods(self):
             self.tv_mods.delete(*self.tv_mods.get_children())
             if not self.lib:
+                self._update_mod_mark()
                 return
+            partners = conflict_partners(self.lib.conflicts_report())
             q = self.q_mods.get().lower()
             for n, m in self.lib.mods.items():
                 hay = f"{n} {m.get('notes','')} {m.get('author','')}".lower()
                 if q in hay:
+                    state = mod_state(m["enabled"], n in partners)
+                    label = STATE_LABELS[state]
+                    if state == "conflict":
+                        label += f" ({len(partners[n])})"
+                    status = f"{STATE_SYMBOLS[state]} {label}"
                     self.tv_mods.insert("", "end", iid=n, values=(
-                        n, "Active" if m["enabled"] else "Disabled", len(m["files"]),
-                        m["date"][:10], m["source"] if m["source"].startswith("http") else Path(m["source"]).name))
+                        n, status, len(m["files"]),
+                        m["date"][:10], m["source"] if m["source"].startswith("http") else Path(m["source"]).name),
+                        tags=(state,))
+            self._mods_select()
 
         def refresh_content(self):
             self.tv_cont.delete(*self.tv_cont.get_children())

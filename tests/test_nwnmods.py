@@ -640,3 +640,79 @@ def test_cli_startscreen_and_splash(tmp_path):
     r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "splash", "off"],
                        cwd=root, capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
+
+
+# --------------------------------------------------------------------------- mod list states (commit: state colors)
+
+
+def _contrast_ratio(hex_a, hex_b):
+    """WCAG 2.1 contrast ratio between two #rrggbb colors."""
+
+    def _lum(h):
+        def _ch(c):
+            c /= 255
+            return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+        r, g, b = (int(h[i:i + 2], 16) for i in (1, 3, 5))
+        return 0.2126 * _ch(r) + 0.7152 * _ch(g) + 0.0722 * _ch(b)
+
+    la, lb = _lum(hex_a), _lum(hex_b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_mod_state_truth_table():
+    # disabled beats conflict: inactive mods never report as conflicting
+    assert nwnmods.mod_state(True, False) == "active"
+    assert nwnmods.mod_state(True, True) == "conflict"
+    assert nwnmods.mod_state(False, True) == "disabled"
+    assert nwnmods.mod_state(False, False) == "disabled"
+
+
+def test_conflict_partners_groups_by_mod():
+    report = {
+        "hak/a.hak": ["modA", "modB"],
+        "override/b.tpa": ["modB", "modC"],
+        "hak/solo.hak": ["modA"],
+    }
+    partners = nwnmods.conflict_partners(report)
+    assert partners["modA"] == {"modB"}
+    assert partners["modB"] == {"modA", "modC"}
+    assert partners["modC"] == {"modB"}
+    # a file with a single owner creates no partnership
+    assert all("modX" not in p for p in partners.values())
+
+
+def test_conflict_partners_empty_report():
+    assert nwnmods.conflict_partners({}) == {}
+
+
+def test_state_symbols_and_labels_share_keys():
+    for theme, palette in nwnmods.STATE_COLORS.items():
+        assert set(palette) == set(nwnmods.STATE_LABELS) == set(nwnmods.STATE_SYMBOLS), theme
+        for state, colors in palette.items():
+            assert len(colors) == 2, f"{theme}/{state} must be (fg, bg)"
+
+
+def test_state_colors_meet_wcag_contrast():
+    # every state color pair, in both themes, must reach 4.5:1
+    for theme, palette in nwnmods.STATE_COLORS.items():
+        for state, (fg, bg) in palette.items():
+            ratio = _contrast_ratio(fg, bg)
+            assert ratio >= 4.5, f"{theme}/{state}: {fg} on {bg} is only {ratio:.2f}:1"
+
+
+def test_state_constants_synced_between_script_and_package():
+    """The monolith nwnmods.py and the nwnmods package must define identical state data."""
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("_nwnmods_state_sync", root / "nwnmods.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.STATE_COLORS == nwnmods.STATE_COLORS
+    assert module.STATE_LABELS == nwnmods.STATE_LABELS
+    assert module.STATE_SYMBOLS == nwnmods.STATE_SYMBOLS
+    assert module.mod_state(True, True) == nwnmods.mod_state(True, True)
+    assert module.conflict_partners({"f": ["a", "b"]}) == nwnmods.conflict_partners({"f": ["a", "b"]})
