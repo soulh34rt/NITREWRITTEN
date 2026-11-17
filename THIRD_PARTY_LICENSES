@@ -1,0 +1,166 @@
+NITREWRITTEN - Third-party licenses
+====================================
+
+NITREWRITTEN bundles or can use the third-party components listed below.
+Each entry notes what the component is used for and its license.
+
+- 7-Zip (bundled; archive extraction)
+    Used by NITREWRITTEN to extract .7z/.zip/.rar and other archives.
+    Homepage: https://www.7-zip.org/
+    License: GNU LGPL (main), BSD 3-clause and BSD 2-clause for parts of the code.
+    The full license text shipped with the bundled 7-Zip files follows
+    (verbatim copy of resources/tools/License.txt):
+
+- unRAR (optional; NOT bundled)
+    Used only if present on the system, to extract .rar archives.
+    NITREWRITTEN invokes the external unrar/unar/bsdtar command-line tools;
+    no unRAR code is distributed with this project.
+
+- FFmpeg (optional; NOT bundled)
+    Used only if present on the system, to convert BIK movies to WBM
+    (Enhanced Edition). NITREWRITTEN invokes the external ffmpeg binary;
+    no FFmpeg code is distributed with this project.
+
+- Neverwinter Vault (online catalog)
+    Project catalog and images shown in the Vault tab are fetched from
+    https://neverwintervault.org/ at runtime. No Vault content is bundled.
+
+- NIT - Neverwinter Nights Mod Installer Tool (inspiration)
+    NITREWRITTEN was inspired by NIT by Surazal.
+    https://neverwintervault.org/project/nwn1/other/tool/neverwinter-nights-mod-installer-tool-nit
+    NIT is a separate project by its own author; NITREWRITTEN is an
+    independent rewrite and shares no code with it.
+
+- Neverwinter Nights
+    Neverwinter Nights is a trademark of Wizards of the Coast.
+    NITREWRITTEN is not affiliated with Beamdog, Bioware or Wizards of the Coast.
+
+
+================================================================================
+7-Zip Extra - License for use and distribution
+(copy of resources/tools/License.txt)
+================================================================================
+
+  7-Zip Extra
+  ~~~~~~~~~~~
+  License for use and distribution
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Copyright (C) 1999-2026 Igor Pavlov.
+
+  The licenses for files are:
+
+    - 7za.exe:
+         - The "GNU LGPL" as main license for most of the code
+         - The "BSD 3-clause License" for some code
+         - The "BSD 2-clause License" for some code
+    - All other files: the "GNU LGPL".
+
+  Redistributions in binary form must reproduce related license information from this file.
+
+  Note: 
+        You can use 7-Zip Extra on any computer, including a computer in a commercial 
+        organization. You don't need to register or pay for 7-Zip.
+
+  It is allowed to digitally sign DLL and EXE files included into this package
+  with arbitrary signatures of third parties.
+
+
+GNU LGPL information
+--------------------
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You can receive a copy of the GNU Lesser General Public License from
+    http://www.gnu.org/
+
+
+
+BSD 3-clause License in 7-Zip code
+----------------------------------
+
+  The "BSD 3-clause License" is used for the following code in 7za.exe
+    -  ZSTD data decompression.
+       that code was developed using original zstd decoder code as reference code.
+       The original zstd decoder code was developed by Facebook Inc,
+       that also uses the "BSD 3-clause License".
+
+  Copyright (c) Facebook, Inc. All rights reserved.
+  Copyright (c) 2023-2025 Igor Pavlov.
+
+Text of the "BSD 3-clause License"
+----------------------------------
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may
+   be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+
+
+
+
+BSD 2-clause License in 7-Zip code
+----------------------------------
+
+  The "BSD 2-clause License" is used for the XXH64 code in 7za.exe.
+
+  XXH64 code in 7-Zip was derived from the original XXH64 code developed by Yann Collet.
+
+  Copyright (c) 2012-2021 Yann Collet.
+  Copyright (c) 2023-2025 Igor Pavlov.
+
+Text of the "BSD 2-clause License"
+----------------------------------
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---

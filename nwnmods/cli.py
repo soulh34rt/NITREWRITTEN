@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from ._common import Err
+from ._common import Err, VERSION, about_text
 from .config import load_cfg, save_cfg
 from .detection import Game, detect_all, launch, steam_workshop_items
 from .gui import run_gui
@@ -20,11 +20,13 @@ def pick(args):
 
 def cli(argv):
     ap = argparse.ArgumentParser(prog="nwnmods", description="Mod Manager for Neverwinter Nights")
+    ap.add_argument("--version", action="version", version=f"nwnmods {VERSION}")
     ap.add_argument("--game", type=int, default=0, help="index shown by 'detect'")
     ap.add_argument("--user", help="data folder (hak, override, modules...)")
     sp = ap.add_subparsers(dest="cmd")
     sp.add_parser("gui")
     sp.add_parser("detect")
+    sp.add_parser("about")
     i = sp.add_parser("install")
     i.add_argument("file")
     i.add_argument("--name")
@@ -102,6 +104,9 @@ def cli(argv):
     splms = spls.add_parser("ms")
     splms.add_argument("value", type=int)
     a = ap.parse_args(argv)
+    if a.cmd == "about":
+        print(about_text())
+        return
     if a.cmd in (None, "gui"):
         return run_gui(a.user)
     if a.cmd == "detect":

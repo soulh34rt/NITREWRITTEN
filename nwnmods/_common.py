@@ -6,6 +6,33 @@ APP = "nwnmods"
 STEAM_APPID_EE = "704450"
 UA = "nwnmods/1.0 (personal mod manager)"
 
+VERSION = "1.1.0"
+REPO_URL = "https://github.com/soulh34rt/NITREWRITTEN"
+AUTHOR = "ada_dev"
+
+
+def about_text() -> str:
+    """ASCII-only About text shared by the CLI 'about' command and the GUI About window."""
+    return "\n".join([
+        f"NITREWRITTEN {VERSION}",
+        "The definitive Mod Manager for Neverwinter Nights",
+        f"Made by {AUTHOR}",
+        f"Repository: {REPO_URL}",
+        "",
+        "Third-party credits:",
+        "- 7-Zip: archive extraction (LGPL). https://www.7-zip.org/",
+        "  Full license text: THIRD_PARTY_LICENSES (from resources/tools/License.txt).",
+        "- unRAR: optional .rar extraction via the unrar command-line tool (not bundled).",
+        "- FFmpeg: optional BIK to WBM conversion (not bundled; install separately).",
+        "- Neverwinter Vault: project catalog and images source. https://neverwintervault.org/",
+        "- NIT (Neverwinter Nights Mod Installer Tool) by Surazal: the original tool",
+        "  that inspired this project.",
+        "  https://neverwintervault.org/project/nwn1/other/tool/neverwinter-nights-mod-installer-tool-nit",
+        "",
+        "Neverwinter Nights is a trademark of Wizards of the Coast. This project is",
+        "not affiliated with Beamdog, Bioware or Wizards of the Coast.",
+    ])
+
 # Mod list states: single source of truth for the GUI (both themes).
 # Each entry is (foreground, background), WCAG contrast >= 4.5:1 (tested).
 STATE_SYMBOLS = {"active": "\u25cf", "disabled": "\u25cb", "conflict": "\u25b2"}  # \u25cf \u25cb \u25b2

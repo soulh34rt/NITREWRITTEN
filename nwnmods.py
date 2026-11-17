@@ -43,6 +43,10 @@ APP = "nwnmods"
 STEAM_APPID_EE = "704450"
 UA = "nwnmods/1.0 (personal mod manager)"
 
+VERSION = "1.1.0"
+REPO_URL = "https://github.com/soulh34rt/NITREWRITTEN"
+AUTHOR = "ada_dev"
+
 # Mod list states: single source of truth for the GUI (both themes).
 # Each entry is (foreground, background), WCAG contrast >= 4.5:1 (tested).
 STATE_SYMBOLS = {"active": "●", "disabled": "○", "conflict": "▲"}  # ● ○ ▲
@@ -82,6 +86,29 @@ def group_conflicts(report: dict) -> dict:
                 if other != n:
                     bucket.setdefault(other, set()).add(f)
     return {n: {o: sorted(fs) for o, fs in b.items()} for n, b in out.items()}
+
+
+def about_text() -> str:
+    """ASCII-only About text shared by the CLI 'about' command and the GUI About window."""
+    return "\n".join([
+        f"NITREWRITTEN {VERSION}",
+        "The definitive Mod Manager for Neverwinter Nights",
+        f"Made by {AUTHOR}",
+        f"Repository: {REPO_URL}",
+        "",
+        "Third-party credits:",
+        "- 7-Zip: archive extraction (LGPL). https://www.7-zip.org/",
+        "  Full license text: THIRD_PARTY_LICENSES (from resources/tools/License.txt).",
+        "- unRAR: optional .rar extraction via the unrar command-line tool (not bundled).",
+        "- FFmpeg: optional BIK to WBM conversion (not bundled; install separately).",
+        "- Neverwinter Vault: project catalog and images source. https://neverwintervault.org/",
+        "- NIT (Neverwinter Nights Mod Installer Tool) by Surazal: the original tool",
+        "  that inspired this project.",
+        "  https://neverwintervault.org/project/nwn1/other/tool/neverwinter-nights-mod-installer-tool-nit",
+        "",
+        "Neverwinter Nights is a trademark of Wizards of the Coast. This project is",
+        "not affiliated with Beamdog, Bioware or Wizards of the Coast.",
+    ])
 
 
 class Err(Exception):
@@ -2864,6 +2891,11 @@ def run_gui(initial_user=None):
             self.lbl_splash.pack(anchor="w", pady=2)
             self.refresh_splash_label()
 
+            ttk.Separator(p, orient="horizontal").pack(fill="x", pady=20)
+
+            ttk.Button(p, text=f"About NITREWRITTEN {VERSION}...",
+                       command=self.show_about).pack(anchor="w", pady=4)
+
         # ---- utilidades
         def log(self, msg):
             self.logbox.configure(state="normal")
@@ -3221,6 +3253,75 @@ def run_gui(initial_user=None):
             sb_x.pack(side="bottom", fill="x")
             t.pack(fill="both", expand=True)
 
+        def show_about(self):
+            """About screen: name + version, author, repo link, third-party credits."""
+            dark = self.v_dark.get()
+            bg = "#1e1e1e" if dark else "#ffffff"
+            fg = "#e0e0e0" if dark else "#000000"
+            header = "#4DA3FF" if dark else "#1a73e8"
+            secondary = "#9D9D9D" if dark else "#666666"
+            w = tk.Toplevel(self)
+            w.title("About NITREWRITTEN")
+            w.geometry("620x520")
+            w.configure(background=bg)
+            try:
+                if (self.res / "pluma.ico").exists():
+                    w.iconbitmap(str(self.res / "pluma.ico"))
+            except Exception:
+                pass
+            t = tk.Text(w, wrap="word", background=bg, foreground=fg, insertbackground=fg,
+                        borderwidth=0, highlightthickness=0, padx=16, pady=14,
+                        font=("Segoe UI", 10), spacing1=2, spacing3=4)
+            t.tag_configure("title", foreground=header, font=("Segoe UI", 16, "bold"),
+                            spacing1=6, spacing3=10)
+            t.tag_configure("author", foreground=fg, font=("Segoe UI", 11), spacing3=12)
+            t.tag_configure("section", foreground=header, font=("Segoe UI", 11, "bold"),
+                            spacing1=10, spacing3=4)
+            t.tag_configure("link", foreground=header, underline=True, font=("Segoe UI", 10))
+            t.tag_configure("legal", foreground=secondary, font=("Segoe UI", 9), spacing1=12)
+
+            t.insert("end", f"NITREWRITTEN {VERSION}\n", "title")
+            t.insert("end", f"Made by {AUTHOR}\n\n", "author")
+            t.insert("end", "Repository: ", "author")
+            t.insert("end", REPO_URL + "\n", "link")
+            t.insert("end", "Third-party credits\n", "section")
+            t.insert("end",
+                     "- 7-Zip: archive extraction (LGPL). https://www.7-zip.org/\n"
+                     "  Full license text: THIRD_PARTY_LICENSES (from resources/tools/License.txt).\n"
+                     "- unRAR: optional .rar extraction via the unrar command-line tool (not bundled).\n"
+                     "- FFmpeg: optional BIK to WBM conversion (not bundled; install separately).\n"
+                     "- Neverwinter Vault: project catalog and images source. https://neverwintervault.org/\n"
+                     "- NIT (Neverwinter Nights Mod Installer Tool) by Surazal: the original tool\n"
+                     "  that inspired this project.\n")
+            t.insert("end",
+                     "https://neverwintervault.org/project/nwn1/other/tool/"
+                     "neverwinter-nights-mod-installer-tool-nit\n", "link")
+            t.insert("end",
+                     "\nNeverwinter Nights is a trademark of Wizards of the Coast. This project is "
+                     "not affiliated with Beamdog, Bioware or Wizards of the Coast.\n", "legal")
+            t.configure(state="disabled")
+            sb = ttk.Scrollbar(w, orient="vertical", command=t.yview)
+            t.configure(yscrollcommand=sb.set)
+            sb.pack(side="right", fill="y")
+            t.pack(fill="both", expand=True)
+
+            def _on_click(event):
+                idx = t.index(f"@{event.x},{event.y}")
+                if "link" in t.tag_names(idx):
+                    # read the whole link line under the cursor
+                    line_start = t.index(f"{idx} lineend linestart")
+                    line_end = t.index(f"{idx} lineend")
+                    url = t.get(line_start, line_end).strip()
+                    if url.startswith("http"):
+                        webbrowser.open(url)
+
+            def _on_motion(event):
+                idx = t.index(f"@{event.x},{event.y}")
+                t.configure(cursor="hand2" if "link" in t.tag_names(idx) else "")
+
+            t.bind("<Button-1>", _on_click)
+            t.bind("<Motion>", _on_motion)
+
         def show_files(self):
             for n in self.selected()[:1]:
                 m = self.lib.mods[n]
@@ -3553,11 +3654,13 @@ def pick(args):
 
 def cli(argv):
     ap = argparse.ArgumentParser(prog="nwnmods", description="Mod Manager for Neverwinter Nights")
+    ap.add_argument("--version", action="version", version=f"nwnmods {VERSION}")
     ap.add_argument("--game", type=int, default=0, help="index shown by 'detect'")
     ap.add_argument("--user", help="data folder (hak, override, modules...)")
     sp = ap.add_subparsers(dest="cmd")
     sp.add_parser("gui")
     sp.add_parser("detect")
+    sp.add_parser("about")
     i = sp.add_parser("install")
     i.add_argument("file")
     i.add_argument("--name")
@@ -3569,6 +3672,9 @@ def cli(argv):
         sp.add_parser(c)
     sp.add_parser("restore").add_argument("zip")
     a = ap.parse_args(argv)
+    if a.cmd == "about":
+        print(about_text())
+        return
     if a.cmd in (None, "gui"):
         return run_gui(a.user)
     if a.cmd == "detect":

@@ -113,3 +113,17 @@ Contributions are welcome! If you find a bug or have a feature request, please o
 
 - 7-Zip is used for archive extraction (LGPL). See `resources/tools/License.txt`.
 - 7-Zip homepage: https://www.7-zip.org/
+- unRAR: optional `.rar` extraction via the external `unrar` command-line tool (not bundled).
+- FFmpeg: optional BIK to WBM conversion for the Enhanced Edition (not bundled; install separately).
+- Neverwinter Vault (https://neverwintervault.org/) is the source of the project catalog and images shown in the Vault tab.
+- NIT (Neverwinter Nights Mod Installer Tool) by Surazal is the original tool that inspired this project: https://neverwintervault.org/project/nwn1/other/tool/neverwinter-nights-mod-installer-tool-nit
+- Full third-party license texts: see [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES).
+
+### About
+
+**NITREWRITTEN** — The definitive Mod Manager for Neverwinter Nights.
+Made by **ada_dev**. Repository: https://github.com/soulh34rt/NITREWRITTEN
+
+Run `nwnmods about` (or `nwnmods --version`) for the same information from the CLI, or use the **About** button in Settings.
+
+*Neverwinter Nights is a trademark of Wizards of the Coast. NITREWRITTEN is an independent project and is not affiliated with Beamdog, Bioware or Wizards of the Coast.*

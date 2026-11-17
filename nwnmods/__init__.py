@@ -4,9 +4,9 @@ from pathlib import Path
 
 from . import config as _config
 from . import files as _files
-from ._common import (APP, Err, MAX_ENTRIES, MAX_FILE_BYTES, MAX_NAME_LEN, MAX_TOTAL_BYTES, STATE_COLORS,
-                      STATE_LABELS, STATE_SYMBOLS, STEAM_APPID_EE, SYS, UA, conflict_partners, group_conflicts,
-                      mod_state)
+from ._common import (APP, AUTHOR, Err, MAX_ENTRIES, MAX_FILE_BYTES, MAX_NAME_LEN, MAX_TOTAL_BYTES, REPO_URL,
+                      STATE_COLORS, STATE_LABELS, STATE_SYMBOLS, STEAM_APPID_EE, SYS, UA, VERSION,
+                      about_text, conflict_partners, group_conflicts, mod_state)
 from .cli import cli, main, pick
 from .detection import (Game, classify, detect_all, documents_dir, ee_user_dir, launch, open_path, other_bases,
                         safe_dirs, steam_libraries, steam_workshop_items)

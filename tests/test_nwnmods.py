@@ -806,3 +806,82 @@ def test_conflicts_cli_grouped_output(tmp_path):
                        cwd=root, capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
     assert "No conflicts found." in r.stdout
+
+
+# --------------------------------------------------------------------------- about / version (commit: about screen)
+
+
+def test_version_and_about_text_synced_between_script_and_package():
+    """VERSION, AUTHOR, REPO_URL and about_text() must match in both entry points."""
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("_nwnmods_about_sync", root / "nwnmods.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.VERSION == nwnmods.VERSION == "1.1.0"
+    assert module.AUTHOR == nwnmods.AUTHOR == "ada_dev"
+    assert module.REPO_URL == nwnmods.REPO_URL
+    assert module.about_text() == nwnmods.about_text()
+
+
+def test_about_text_content_is_ascii():
+    txt = nwnmods.about_text()
+    # ASCII-only rule for text shared with the CLI
+    txt.encode("ascii")
+    assert f"NITREWRITTEN {nwnmods.VERSION}" in txt
+    assert f"Made by {nwnmods.AUTHOR}" in txt
+    assert nwnmods.REPO_URL in txt
+    for needle in ("7-Zip", "7-zip.org", "unRAR", "FFmpeg", "Neverwinter Vault",
+                   "Surazal", "neverwintervault.org/project", "Wizards of the Coast"):
+        assert needle in txt, needle
+
+
+def test_cli_about_and_version(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    env = dict(os.environ)
+    env["APPDATA"] = str(tmp_path / "appdata")
+    env["XDG_CONFIG_HOME"] = str(tmp_path / "xdg")
+    env["HOME"] = str(tmp_path / "home")
+
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--version"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    assert f"nwnmods {nwnmods.VERSION}" in r.stdout
+
+    for cmd in ([sys.executable, str(root / "nwnmods.py"), "about"],
+                [sys.executable, "-m", "nwnmods", "about"]):
+        r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, env=env)
+        assert r.returncode == 0, r.stderr
+        assert "NITREWRITTEN 1.1.0" in r.stdout
+        assert "Made by ada_dev" in r.stdout
+        assert nwnmods.REPO_URL in r.stdout
+        assert "Surazal" in r.stdout
+        # CLI output must stay ASCII
+        assert r.stdout == r.stdout.encode("ascii", "strict").decode("ascii")
+
+
+def test_third_party_licenses_file():
+    root = Path(__file__).resolve().parents[1]
+    tpc = root / "THIRD_PARTY_LICENSES"
+    assert tpc.exists(), "THIRD_PARTY_LICENSES must exist at the repo root"
+    content = tpc.read_text(encoding="utf-8")
+    # 7-Zip full license text is copied verbatim from resources/tools/License.txt
+    lic = (root / "resources" / "tools" / "License.txt").read_text(encoding="utf-8", errors="replace").rstrip("\n")
+    assert lic in content, "7-Zip license text must be included verbatim"
+    for needle in ("7-Zip", "unRAR", "FFmpeg", "Neverwinter Vault", "Surazal",
+                   "Wizards of the Coast"):
+        assert needle in content, needle
+
+
+def test_readme_credits_extended():
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8", errors="replace")
+    # extended (not removed) credits
+    assert "7-Zip homepage: https://www.7-zip.org/" in readme
+    assert "THIRD_PARTY_LICENSES" in readme
+    assert "Surazal" in readme
+    assert "Made by **ada_dev**" in readme
+    assert nwnmods.REPO_URL in readme
+    assert "nwnmods about" in readme
