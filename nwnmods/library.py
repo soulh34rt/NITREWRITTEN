@@ -7,7 +7,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from ._common import Err
+from ._common import Err, group_conflicts
 from .files import CONTENT_DIRS, _inside, extract, map_path
 
 
@@ -901,6 +901,10 @@ class Library:
                 for f in m["files"]:
                     seen.setdefault(f, []).append(n)
         return {f: ns for f, ns in seen.items() if len(ns) > 1}
+
+    def conflicts_by_mod(self) -> dict:
+        """Active mod -> {other active mod: [shared files]} (empty when no conflicts)."""
+        return group_conflicts(self.conflicts_report())
 
     def scan(self, category=None):
         owners, rows = self.owners(), []

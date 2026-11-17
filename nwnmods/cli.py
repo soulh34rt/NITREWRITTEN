@@ -125,10 +125,14 @@ def cli(argv):
     elif a.cmd == "remove":
         lib.remove(a.name, force_deps=getattr(a, 'force', False))
     elif a.cmd == "conflicts":
-        conflicts = lib.conflicts_report()
-        for f, ns in conflicts.items():
-            print(f"{f}: {', '.join(ns)}")
-        if not conflicts:
+        grouped = lib.conflicts_by_mod()
+        for n in sorted(grouped):
+            for other in sorted(grouped[n]):
+                files = grouped[n][other]
+                print(f"{n} <-> {other} ({len(files)} shared files)")
+                for f in files:
+                    print(f"    {f}")
+        if not grouped:
             print("No conflicts found.")
     elif a.cmd == "backup":
         print(lib.backup())

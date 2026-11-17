@@ -34,6 +34,19 @@ def conflict_partners(report: dict) -> dict:
     return partners
 
 
+def group_conflicts(report: dict) -> dict:
+    """Group a conflicts_report (file -> mods) per mod: mod -> {other mod: [shared files]}."""
+    out = {}
+    for f, ns in report.items():
+        mods = set(ns)
+        for n in mods:
+            bucket = out.setdefault(n, {})
+            for other in mods:
+                if other != n:
+                    bucket.setdefault(other, set()).add(f)
+    return {n: {o: sorted(fs) for o, fs in b.items()} for n, b in out.items()}
+
+
 class Err(Exception):
     pass
 

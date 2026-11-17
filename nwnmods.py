@@ -71,6 +71,19 @@ def conflict_partners(report: dict) -> dict:
     return partners
 
 
+def group_conflicts(report: dict) -> dict:
+    """Group a conflicts_report (file -> mods) per mod: mod -> {other mod: [shared files]}."""
+    out = {}
+    for f, ns in report.items():
+        mods = set(ns)
+        for n in mods:
+            bucket = out.setdefault(n, {})
+            for other in mods:
+                if other != n:
+                    bucket.setdefault(other, set()).add(f)
+    return {n: {o: sorted(fs) for o, fs in b.items()} for n, b in out.items()}
+
+
 class Err(Exception):
     pass
 
@@ -1922,6 +1935,10 @@ class Library:
                     seen.setdefault(f, []).append(n)
         return {f: ns for f, ns in seen.items() if len(ns) > 1}
 
+    def conflicts_by_mod(self) -> dict:
+        """Active mod -> {other active mod: [shared files]} (empty when no conflicts)."""
+        return group_conflicts(self.conflicts_report())
+
     def scan(self, category=None):
         owners, rows = self.owners(), []
         for sub in ([category] if category else CONTENT_DIRS):
@@ -2367,6 +2384,13 @@ def run_gui(initial_user=None):
             if hasattr(self, "_legend_labels"):
                 for st, lbl in self._legend_labels.items():
                     lbl.configure(fg=self._state_palette[st][0], bg=panel)
+            # Detail panel tags + refresh (conflict section must follow the theme)
+            self._det_colors = {"fg": fg, "header": header_fg, "secondary": secondary_fg, "bg": tree_bg}
+            if hasattr(self, "mod_det"):
+                self._config_mod_detail_tags()
+                self._update_mod_detail()
+            if hasattr(self, "_mod_tip") and self._mod_tip is not None:
+                self._hide_mod_tooltip()
 
         # ---- construccion
         def _build(self):
@@ -2463,6 +2487,7 @@ def run_gui(initial_user=None):
                 if list(tv.item(iid, "tags")) != tags:
                     tv.item(iid, tags=tags)
             self._update_mod_mark()
+            self._update_mod_detail()
 
         def _update_mod_mark(self):
             """State-color strip on the left edge of the selected mod row."""
@@ -2480,6 +2505,146 @@ def run_gui(initial_user=None):
             mark.configure(bg=self._state_palette[state][0])
             mark.place(x=x, y=y, width=4, height=h)
 
+        # ---- mod detail panel (info + conflicts, click a mod name to select it)
+        def _config_mod_detail_tags(self):
+            c = getattr(self, "_det_colors", None)
+            if not c or not hasattr(self, "mod_det"):
+                return
+            det = self.mod_det
+            det.configure(background=c["bg"], foreground=c["fg"], insertbackground=c["fg"])
+            det.tag_configure("header", foreground=c["header"], font=("Segoe UI", 12, "bold"))
+            det.tag_configure("section", foreground=c["header"], font=("Segoe UI", 11, "bold"))
+            det.tag_configure("field", foreground=c["secondary"], font=("Segoe UI", 9, "bold"))
+            det.tag_configure("value", foreground=c["fg"], font=("Segoe UI", 10))
+            det.tag_configure("file", foreground=c["secondary"], font=("Consolas", 9))
+            det.tag_configure("modlink", foreground=c["header"], underline=True,
+                              font=("Segoe UI", 10, "bold"))
+            det.tag_configure("toggle", foreground=c["header"], underline=True,
+                              font=("Segoe UI", 9))
+            for st in ("active", "disabled", "conflict"):
+                fg_c, _bg_c = self._state_palette[st]
+                det.tag_configure(f"state_{st}", foreground=fg_c, font=("Segoe UI", 10, "bold"))
+
+        def _update_mod_detail(self):
+            det = getattr(self, "mod_det", None)
+            if det is None:
+                return
+            det.configure(state="normal")
+            det.delete("1.0", "end")
+            for t in getattr(self, "_mod_detail_tags", []):
+                try:
+                    det.tag_delete(t)
+                except tk.TclError:
+                    pass
+            self._mod_detail_tags = []
+            sel = self.tv_mods.selection()
+            name = sel[0] if sel else None
+            if not self.lib or not name or name not in self.lib.mods:
+                det.insert("end", "Select a mod to see its details and conflicts.", ("value",))
+                det.configure(state="disabled")
+                return
+            m = self.lib.mods[name]
+            partners = getattr(self, "_mod_partners", {})
+            conflicts = getattr(self, "_mod_conflicts", {}).get(name, {})
+            state = mod_state(m["enabled"], name in partners)
+            det.insert("end", f"{name}\n", "header")
+            status = f"{STATE_SYMBOLS[state]} {STATE_LABELS[state]}"
+            if state == "conflict":
+                status += f" ({len(partners[name])})"
+            det.insert("end", f"{status}\n\n", f"state_{state}")
+            for label, value in (
+                ("Files", str(len(m["files"]))),
+                ("Date", m["date"][:10]),
+                ("Source", m["source"] if m["source"].startswith("http") else Path(m["source"]).name),
+                ("Author", m.get("author") or "-"),
+                ("Notes", m.get("notes") or "-"),
+            ):
+                det.insert("end", f"{label}: ", "field")
+                det.insert("end", f"{value}\n", "value")
+            if conflicts:
+                det.insert("end", "\nConflicts\n", "section")
+                show_all = name in self._detail_expanded
+                total = 0
+                for other in sorted(conflicts):
+                    files = conflicts[other]
+                    total += len(files)
+                    tag = f"mod::{other}"
+                    det.insert("end", f"{other} ", ("modlink", tag))
+                    det.insert("end", f"({len(files)} shared)\n", "field")
+                    det.tag_bind(tag, "<Button-1>", lambda _e, o=other: self._select_mod(o))
+                    self._mod_detail_tags.append(tag)
+                    shown = files if show_all else files[:10]
+                    for f in shown:
+                        det.insert("end", f"  {f}\n", "file")
+                    if not show_all and len(files) > len(shown):
+                        det.insert("end", f"  ... {len(files) - len(shown)} more\n", "field")
+                if total > 10:
+                    label = "Hide extra files" if show_all else f"Show all files ({total})"
+                    tag = "toggle::all"
+                    det.insert("end", f"\n{label}\n", ("toggle", tag))
+                    det.tag_bind(tag, "<Button-1>", lambda _e: self._toggle_detail_files())
+                    self._mod_detail_tags.append(tag)
+            else:
+                note = ("Mod is disabled - disabled mods never conflict."
+                        if not m["enabled"] else "No conflicts with other active mods.")
+                det.insert("end", f"\n{note}\n", "value")
+            det.configure(state="disabled")
+
+        def _detail_motion(self, event):
+            """Hand cursor over clickable mod names / show-all links in the detail panel."""
+            idx = self.mod_det.index(f"@{event.x},{event.y}")
+            over_link = any(t.startswith("mod::") or t == "toggle::all"
+                            for t in self.mod_det.tag_names(idx))
+            self.mod_det.configure(cursor="hand2" if over_link else "")
+
+        def _toggle_detail_files(self):
+            sel = self.tv_mods.selection()
+            if not sel:
+                return
+            name = sel[0]
+            if name in self._detail_expanded:
+                self._detail_expanded.discard(name)
+            else:
+                self._detail_expanded.add(name)
+            self._update_mod_detail()
+
+        def _select_mod(self, name):
+            tv = self.tv_mods
+            if not tv.exists(name):
+                self.q_mods.set("")  # clear the search filter so the mod becomes visible
+            if tv.exists(name):
+                tv.selection_set(name)
+                tv.see(name)
+
+        # ---- conflict tooltip on mod rows
+        def _mod_tooltip(self, event):
+            row = self.tv_mods.identify_row(event.y)
+            names = sorted(getattr(self, "_mod_partners", {}).get(row, ())) if row else []
+            if not names:
+                self._hide_mod_tooltip()
+                return
+            text = "Conflicts with: " + ", ".join(names)
+            tip = getattr(self, "_mod_tip", None)
+            if tip is None:
+                tip = tk.Toplevel(self)
+                tip.overrideredirect(True)
+                tip.attributes("-topmost", True)
+                self._mod_tip_lbl = tk.Label(tip, padx=6, pady=2, font=("Segoe UI", 9),
+                                             relief="flat", borderwidth=1)
+                self._mod_tip_lbl.pack()
+                self._mod_tip = tip
+            lbl = self._mod_tip_lbl
+            c = getattr(self, "_det_colors", {})
+            lbl.configure(text=text, bg=self._panel_bg, fg=c.get("fg", "#E0E0E0"),
+                          highlightthickness=1, highlightbackground=c.get("secondary", "#666666"))
+            tip.geometry(f"+{event.x_root + 14}+{event.y_root + 16}")
+            tip.deiconify()
+
+        def _hide_mod_tooltip(self):
+            tip = getattr(self, "_mod_tip", None)
+            if tip is not None:
+                tip.withdraw()
+
         def _build_mods(self):
             p = self.tab_mods
             self._btns(p, (("Install Files...", self.install_files), ("Install Folder...", self.install_dir),
@@ -2495,8 +2660,23 @@ def run_gui(initial_user=None):
             e.pack(side="left", fill="x", expand=True)
             self.q_mods.trace_add("write", lambda *a: self.refresh_mods())
 
+            # Detail-panel state (must exist before any <<TreeviewSelect>> fires)
+            self._mod_detail_tags = []
+            self._detail_expanded = set()
+            self._mod_partners = {}
+            self._mod_conflicts = {}
+
             # Legend under the table (packed bottom-first so the tree fills above it)
-            leg = ttk.Frame(p)
+            # Paned: table+legend (left) | detail panel with conflicts (right)
+            paned = ttk.PanedWindow(p, orient="horizontal")
+            paned.pack(fill="both", expand=True)
+            left = ttk.Frame(paned)
+            paned.add(left, weight=3)
+            right = ttk.Frame(paned, padding=6)
+            paned.add(right, weight=1)
+            right.configure(width=300)
+
+            leg = ttk.Frame(left)
             leg.pack(fill="x", side="bottom", pady=(4, 0))
             self._legend_labels = {}
             for st in ("active", "disabled", "conflict"):
@@ -2506,15 +2686,25 @@ def run_gui(initial_user=None):
                 lbl.pack(side="left", padx=(0, 14))
                 self._legend_labels[st] = lbl
 
-            self.tv_mods = self._tree(p, ("name", "status", "files", "date", "source"),
+            self.tv_mods = self._tree(left, ("name", "status", "files", "date", "source"),
                                       (260, 150, 70, 100, 340))
             for c in ("name", "status", "files", "date", "source"):
                 self.tv_mods.heading(c, text=c.title())
             self._config_mod_tags()
             self.tv_mods.bind("<<TreeviewSelect>>", self._mods_select)
+            self.tv_mods.bind("<Motion>", self._mod_tooltip)
+            self.tv_mods.bind("<Leave>", lambda e: self._hide_mod_tooltip())
             # Small state-color strip drawn over the left edge of the selected row
             self._state_mark = tk.Frame(self.tv_mods.master, width=4, highlightthickness=0)
             self._state_mark.place_forget()
+
+            # Detail panel: mod info + Conflicts section (click a mod name to select it)
+            ttk.Label(right, text="Details", style="Secondary.TLabel").pack(anchor="w")
+            self.mod_det = tk.Text(right, wrap="word", state="disabled", font=("Segoe UI", 10),
+                                   relief="flat", borderwidth=0, padx=4, pady=4)
+            self.mod_det.pack(fill="both", expand=True, pady=(2, 0))
+            self.mod_det.bind("<Motion>", self._detail_motion)
+            self._config_mod_detail_tags()
 
         def _build_content(self):
             p = self.tab_cont
@@ -2888,9 +3078,13 @@ def run_gui(initial_user=None):
         def refresh_mods(self):
             self.tv_mods.delete(*self.tv_mods.get_children())
             if not self.lib:
+                self._mod_partners = {}
+                self._mod_conflicts = {}
                 self._update_mod_mark()
                 return
+            self._mod_conflicts = self.lib.conflicts_by_mod()
             partners = conflict_partners(self.lib.conflicts_report())
+            self._mod_partners = partners
             q = self.q_mods.get().lower()
             for n, m in self.lib.mods.items():
                 hay = f"{n} {m.get('notes','')} {m.get('author','')}".lower()
@@ -3045,8 +3239,14 @@ def run_gui(initial_user=None):
         def show_conflicts(self):
             if not self._need_lib():
                 return
-            c = self.lib.conflicts_report()
-            txt = "\n".join(f"{f}\n    mods: {', '.join(ns)}  (last installed wins)" for f, ns in c.items())
+            grouped = self.lib.conflicts_by_mod()
+            lines = []
+            for n in sorted(grouped):
+                for other in sorted(grouped[n]):
+                    files = grouped[n][other]
+                    lines.append(f"{n} <-> {other} ({len(files)} shared files)")
+                    lines += [f"    {f}" for f in files]
+            txt = "\n".join(lines)
             self._text_window("Mod Conflicts", txt or "No conflicts between active mods.")
 
         def do_cleanup(self):
@@ -3392,10 +3592,14 @@ def cli(argv):
     elif a.cmd == "remove":
         lib.remove(a.name)
     elif a.cmd == "conflicts":
-        c = lib.conflicts_report()
-        for f, ns in c.items():
-            print(f"{f}: {', '.join(ns)}")
-        if not c:
+        grouped = lib.conflicts_by_mod()
+        for n in sorted(grouped):
+            for other in sorted(grouped[n]):
+                files = grouped[n][other]
+                print(f"{n} <-> {other} ({len(files)} shared files)")
+                for f in files:
+                    print(f"    {f}")
+        if not grouped:
             print("No conflicts found.")
     elif a.cmd == "backup":
         print(lib.backup())

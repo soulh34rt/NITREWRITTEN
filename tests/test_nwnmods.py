@@ -716,3 +716,93 @@ def test_state_constants_synced_between_script_and_package():
     assert module.STATE_SYMBOLS == nwnmods.STATE_SYMBOLS
     assert module.mod_state(True, True) == nwnmods.mod_state(True, True)
     assert module.conflict_partners({"f": ["a", "b"]}) == nwnmods.conflict_partners({"f": ["a", "b"]})
+    assert module.group_conflicts({"f": ["a", "b"]}) == nwnmods.group_conflicts({"f": ["a", "b"]})
+
+
+# --------------------------------------------------------------------------- conflict details (commit: conflicts by mod)
+
+
+def test_group_conflicts_groups_files_per_mod():
+    report = {
+        "hak/a.hak": ["modA", "modB"],
+        "hak/b.hak": ["modA", "modB"],
+        "override/c.tpa": ["modB", "modC"],
+    }
+    grouped = nwnmods.group_conflicts(report)
+    assert grouped["modA"] == {"modB": ["hak/a.hak", "hak/b.hak"]}
+    assert grouped["modB"] == {"modA": ["hak/a.hak", "hak/b.hak"], "modC": ["override/c.tpa"]}
+    assert grouped["modC"] == {"modB": ["override/c.tpa"]}
+    # a file with a single owner creates no grouping
+    assert "modX" not in grouped
+
+
+def test_group_conflicts_empty_report():
+    assert nwnmods.group_conflicts({}) == {}
+
+
+def test_conflicts_by_mod_on_library(lib, tmp_path):
+    z1 = tmp_path / "a.zip"
+    z2 = tmp_path / "b.zip"
+    make_zip(z1, [("hak/x.hak", b"a"), ("hak/only_a.hak", b"1")])
+    make_zip(z2, [("hak/x.hak", b"b")])
+    lib.install(z1, name="modA")
+    lib.install(z2, name="modB", on_conflict=lambda c: "overwrite")
+    grouped = lib.conflicts_by_mod()
+    assert grouped["modA"] == {"modB": ["hak/x.hak"]}
+    assert grouped["modB"] == {"modA": ["hak/x.hak"]}
+    # non-shared files never show up
+    assert all("hak/only_a.hak" not in fs for d in grouped.values() for fs in d.values())
+
+
+def test_conflicts_by_mod_excludes_disabled(lib, tmp_path):
+    z1 = tmp_path / "a.zip"
+    z2 = tmp_path / "b.zip"
+    make_zip(z1, [("hak/x.hak", b"a")])
+    make_zip(z2, [("hak/x.hak", b"b")])
+    lib.install(z1, name="modA")
+    lib.install(z2, name="modB", on_conflict=lambda c: "overwrite")
+    assert lib.conflicts_by_mod()
+    lib.disable("modB")
+    assert lib.conflicts_by_mod() == {}
+    lib.enable("modB", on_conflict=lambda c: "overwrite")
+    assert lib.conflicts_by_mod()["modA"] == {"modB": ["hak/x.hak"]}
+
+
+def test_conflicts_cli_grouped_output(tmp_path):
+    """CLI 'conflicts' prints mod <-> mod with shared files (ASCII only)."""
+    root = Path(__file__).resolve().parents[1]
+    user = tmp_path / "user"
+    user.mkdir()
+    env = dict(os.environ)
+    env["APPDATA"] = str(tmp_path / "appdata")
+    env["XDG_CONFIG_HOME"] = str(tmp_path / "xdg")
+    env["HOME"] = str(tmp_path / "home")
+
+    z1 = tmp_path / "a.zip"
+    z2 = tmp_path / "b.zip"
+    make_zip(z1, [("hak/x.hak", b"a")])
+    make_zip(z2, [("hak/x.hak", b"b")])
+
+    for zp, name in ((z1, "modA"), (z2, "modB")):
+        r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user),
+                            "install", str(zp), "--name", name, "--force"],
+                           cwd=root, capture_output=True, text=True, env=env)
+        assert r.returncode == 0, r.stderr
+
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "conflicts"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    assert "modA <-> modB (1 shared files)" in r.stdout
+    assert "hak/x.hak" in r.stdout
+    # grouped output must stay ASCII
+    assert r.stdout == r.stdout.encode("ascii", "strict").decode("ascii")
+
+    # disabling both sides clears the report
+    for name in ("modA", "modB"):
+        r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "disable", name],
+                           cwd=root, capture_output=True, text=True, env=env)
+        assert r.returncode == 0, r.stderr
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "conflicts"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    assert "No conflicts found." in r.stdout
