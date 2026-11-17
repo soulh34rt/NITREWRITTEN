@@ -84,6 +84,13 @@ def cli(argv):
     sr = ssv.add_parser("restore")
     sr.add_argument("mod")
     sr.add_argument("--from-archive", action="store_true")
+    # NWN start screen (main menu background)
+    sscr = sp.add_parser("startscreen")
+    sssv = sscr.add_subparsers(dest="ss_cmd")
+    sssv.add_parser("status")
+    ssss = sssv.add_parser("set")
+    ssss.add_argument("image")
+    sssv.add_parser("restore")
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
         return run_gui(a.user)
@@ -256,6 +263,23 @@ def cli(argv):
         elif sc == "restore":
             lib.saves_restore(a.mod, from_archive=a.from_archive)
             print(f"[OK] restored saves for '{a.mod}'")
+    elif a.cmd == "startscreen":
+        sc = getattr(a, "ss_cmd", None)
+        if sc == "set":
+            dst = lib.set_start_screen(a.image)
+            print(f"[OK] start screen installed: {dst}")
+        elif sc == "restore":
+            if lib.restore_start_screen():
+                print("[OK] custom start screen removed (kept in .nwnmods/trash/)")
+            else:
+                print("No custom start screen in use.")
+        else:
+            cur = lib.current_start_screen()
+            if cur:
+                print(f"Custom start screen: {cur['path']}  ({cur['size']} bytes)")
+            else:
+                print("Start screen: game default (no custom image)")
+            print(f"Target: {lib.start_screen_path()}")
 
 
 def main(argv=None):

@@ -1949,6 +1949,86 @@ class Library:
                     raise Err("Backup contains insecure paths.")
             z.extractall(self.user)
 
+    # --- NWN:EE start screen (main menu background) ---
+    # Since patch 8191 the game reads 'gui_pre_bknd3' from override/ as the
+    # start screen image, so that is the file we manage here.
+
+    START_SCREEN_NAME = "gui_pre_bknd3"
+    START_SCREEN_EXTS = (".tga", ".dds", ".bmp", ".png")
+
+    def start_screen_path(self) -> Path:
+        """Path where the custom start screen lives (override/gui_pre_bknd3.tga)."""
+        return self.content_dir("override") / f"{self.START_SCREEN_NAME}.tga"
+
+    def current_start_screen(self):
+        """Info about the active start screen file, or None if the game default is in use."""
+        ov = self.content_dir("override")
+        for ext in self.START_SCREEN_EXTS:
+            p = ov / f"{self.START_SCREEN_NAME}{ext}"
+            if p.exists():
+                try:
+                    size = p.stat().st_size
+                except OSError:
+                    size = 0
+                return {"path": str(p), "ext": ext, "size": size}
+        return None
+
+    def set_start_screen(self, image_path) -> Path:
+        """Install a custom start screen image (converted to .tga).
+
+        Any existing start screen file is parked in .nwnmods/trash/ first,
+        so nothing is ever lost. The image is converted before the old file
+        is touched, so a bad image cannot leave the game without a screen.
+        """
+        from PIL import Image
+        src = Path(image_path)
+        if not src.exists():
+            raise Err(f"Image not found: {src}")
+        ov = self.content_dir("override")
+        ov.mkdir(parents=True, exist_ok=True)
+        dst = self.start_screen_path()
+        tmp = ov / f".{self.START_SCREEN_NAME}.tmp"
+        try:
+            img = Image.open(src)
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA")
+            img.save(tmp, format="TGA")
+        except Exception as e:  # noqa: BLE001
+            tmp.unlink(missing_ok=True)
+            raise Err(f"Could not convert image to TGA: {e}") from e
+        existing = self.current_start_screen()
+        if existing:
+            self._park_start_screen(existing["path"])
+        tmp.replace(dst)
+        return dst
+
+    def restore_start_screen(self) -> bool:
+        """Remove the custom start screen so the game shows its original one again.
+
+        The removed file is parked in .nwnmods/trash/, never deleted outright.
+        Returns True if a file was removed.
+        """
+        removed = False
+        ov = self.content_dir("override")
+        for ext in self.START_SCREEN_EXTS:
+            p = ov / f"{self.START_SCREEN_NAME}{ext}"
+            if p.exists():
+                self._park_start_screen(str(p))
+                removed = True
+        return removed
+
+    def _park_start_screen(self, path):
+        """Move a start screen file into .nwnmods/trash/ (safe, reversible)."""
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        trash = self.base / "trash" / f"startscreen-{ts}"
+        trash.mkdir(parents=True, exist_ok=True)
+        target = trash / Path(path).name
+        try:
+            shutil.move(str(path), str(target))
+        except OSError:
+            shutil.copy2(str(path), str(target))
+            Path(path).unlink(missing_ok=True)
+
     PARTY_FOLDERS = ("saves", "localvault", "servervault", "dmvault")
 
     def _save_set_dir(self, mod):
@@ -2425,6 +2505,19 @@ def run_gui(initial_user=None):
             ver = sevenzip_version()
             ttk.Label(p, text=f"7-Zip: {ver or p7 or 'not found'} ({src})", style="Secondary.TLabel").pack(anchor="w", pady=5)
 
+            ttk.Separator(p, orient="horizontal").pack(fill="x", pady=20)
+
+            # ---- NWN start screen (main menu background)
+            ttk.Label(p, text="Game start screen (main menu background):",
+                      font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(5, 3))
+            self.lbl_startscreen = ttk.Label(p, text="", style="Secondary.TLabel")
+            self.lbl_startscreen.pack(anchor="w", pady=2)
+            bf = ttk.Frame(p)
+            bf.pack(anchor="w", pady=4)
+            ttk.Button(bf, text="Choose image...", command=self.startscreen_choose_ui).pack(side="left", padx=(0, 6))
+            ttk.Button(bf, text="Restore original", command=self.startscreen_restore_ui).pack(side="left")
+            self.refresh_startscreen_label()
+
         # ---- utilidades
         def log(self, msg):
             self.logbox.configure(state="normal")
@@ -2457,6 +2550,46 @@ def run_gui(initial_user=None):
                 ip["policy"] = self.v_policy.get()
             save_cfg(self.cfg)
             self._apply_theme()
+
+        # ---- NWN start screen + app splash (Settings)
+        def refresh_startscreen_label(self):
+            if not hasattr(self, "lbl_startscreen"):
+                return
+            if not self.lib:
+                self.lbl_startscreen.configure(text="No game folder selected.")
+                return
+            cur = self.lib.current_start_screen()
+            if cur:
+                self.lbl_startscreen.configure(text=f"Custom: {cur['path']} ({cur['size']} bytes)")
+            else:
+                self.lbl_startscreen.configure(text="Game default (no custom image)")
+
+        def startscreen_choose_ui(self):
+            if not self._need_lib():
+                return
+            p = filedialog.askopenfilename(
+                title="Select start screen image",
+                filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.tga *.webp"), ("All files", "*.*")])
+            if not p:
+                return
+            dst = self.guard(self.lib.set_start_screen, p)
+            if dst:
+                self.log(f"Start screen installed: {dst}")
+                self.refresh_startscreen_label()
+
+        def startscreen_restore_ui(self):
+            if not self._need_lib():
+                return
+            if not self.lib.current_start_screen():
+                messagebox.showinfo("Start screen", "No custom start screen in use.")
+                return
+            if not messagebox.askyesno("Restore start screen",
+                                       "Remove the custom start screen?\n\n"
+                                       "It will be kept in .nwnmods/trash/ so you can restore it later."):
+                return
+            if self.guard(self.lib.restore_start_screen):
+                self.log("Custom start screen removed (kept in .nwnmods/trash/)")
+                self.refresh_startscreen_label()
 
         def ask_conflict(self, conf):
             pol = self.v_policy.get()

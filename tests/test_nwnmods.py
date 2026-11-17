@@ -533,3 +533,85 @@ def test_remove_parks_files_in_trash(lib, user_dir, tmp_path):
     assert not (user_dir / "hak" / "tr.hak").exists()
     trash = list((user_dir / ".nwnmods" / "trash").glob("undeploy-tr-*/hak/tr.hak"))
     assert trash and trash[0].read_bytes() == b"x"
+
+
+def _make_png(path):
+    from PIL import Image
+    Image.new("RGB", (32, 18), (200, 30, 30)).save(path)
+    return path
+
+
+def test_start_screen_roundtrip(lib, user_dir, tmp_path):
+    img = _make_png(tmp_path / "bg.png")
+    # nothing installed yet
+    assert lib.current_start_screen() is None
+    dst = lib.set_start_screen(img)
+    assert dst == user_dir / "override" / "gui_pre_bknd3.tga"
+    assert dst.exists()
+    cur = lib.current_start_screen()
+    assert cur and cur["ext"] == ".tga"
+    # restore parks the file instead of deleting it
+    assert lib.restore_start_screen() is True
+    assert lib.current_start_screen() is None
+    assert not dst.exists()
+    parked = list((user_dir / ".nwnmods" / "trash").glob("startscreen-*/gui_pre_bknd3.tga"))
+    assert parked
+
+
+def test_start_screen_replace_backs_up_previous(lib, user_dir, tmp_path):
+    img1 = _make_png(tmp_path / "one.png")
+    img2 = _make_png(tmp_path / "two.png")
+    lib.set_start_screen(img1)
+    lib.set_start_screen(img2)
+    assert lib.current_start_screen()["path"].endswith(".tga")
+    parked = list((user_dir / ".nwnmods" / "trash").glob("startscreen-*/gui_pre_bknd3.tga"))
+    assert len(parked) == 1
+
+
+def test_start_screen_bad_image_keeps_current(lib, user_dir, tmp_path):
+    img = _make_png(tmp_path / "good.png")
+    lib.set_start_screen(img)
+    before = lib.current_start_screen()
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"not an image")
+    with pytest.raises(nwnmods.Err):
+        lib.set_start_screen(bad)
+    # the previous screen is untouched and no temp file lingers
+    assert lib.current_start_screen() == before
+    assert not (user_dir / "override" / ".gui_pre_bknd3.tmp").exists()
+
+
+def test_start_screen_missing_image_errors(lib):
+    with pytest.raises(nwnmods.Err):
+        lib.set_start_screen(Path("/nonexistent/img.png"))
+
+
+def test_cli_startscreen(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    user = tmp_path / "userdata"
+    (user / "override").mkdir(parents=True)
+    img = _make_png(tmp_path / "bg.png")
+
+    # status with no custom screen
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "startscreen", "status"],
+                       cwd=root, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert "game default" in r.stdout.lower()
+
+    # install then status shows the custom file
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user),
+                        "startscreen", "set", str(img)],
+                       cwd=root, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert (user / "override" / "gui_pre_bknd3.tga").exists()
+
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "startscreen", "status"],
+                       cwd=root, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert "custom start screen" in r.stdout.lower()
+
+    # restore removes it (parked in trash)
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "startscreen", "restore"],
+                       cwd=root, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert not (user / "override" / "gui_pre_bknd3.tga").exists()

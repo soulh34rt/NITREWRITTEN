@@ -953,6 +953,87 @@ class Library:
                 if not _inside(self.user, m.filename):
                     raise Err("Backup contains insecure paths.")
             z.extractall(self.user)
+
+    # --- NWN:EE start screen (main menu background) ---
+    # Since patch 8191 the game reads 'gui_pre_bknd3' from override/ as the
+    # start screen image, so that is the file we manage here.
+
+    START_SCREEN_NAME = "gui_pre_bknd3"
+    START_SCREEN_EXTS = (".tga", ".dds", ".bmp", ".png")
+
+    def start_screen_path(self) -> Path:
+        """Path where the custom start screen lives (override/gui_pre_bknd3.tga)."""
+        return self.content_dir("override") / f"{self.START_SCREEN_NAME}.tga"
+
+    def current_start_screen(self):
+        """Info about the active start screen file, or None if the game default is in use."""
+        ov = self.content_dir("override")
+        for ext in self.START_SCREEN_EXTS:
+            p = ov / f"{self.START_SCREEN_NAME}{ext}"
+            if p.exists():
+                try:
+                    size = p.stat().st_size
+                except OSError:
+                    size = 0
+                return {"path": str(p), "ext": ext, "size": size}
+        return None
+
+    def set_start_screen(self, image_path) -> Path:
+        """Install a custom start screen image (converted to .tga).
+
+        Any existing start screen file is parked in .nwnmods/trash/ first,
+        so nothing is ever lost. The image is converted before the old file
+        is touched, so a bad image cannot leave the game without a screen.
+        """
+        from PIL import Image
+        src = Path(image_path)
+        if not src.exists():
+            raise Err(f"Image not found: {src}")
+        ov = self.content_dir("override")
+        ov.mkdir(parents=True, exist_ok=True)
+        dst = self.start_screen_path()
+        tmp = ov / f".{self.START_SCREEN_NAME}.tmp"
+        try:
+            img = Image.open(src)
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA")
+            img.save(tmp, format="TGA")
+        except Exception as e:  # noqa: BLE001
+            tmp.unlink(missing_ok=True)
+            raise Err(f"Could not convert image to TGA: {e}") from e
+        existing = self.current_start_screen()
+        if existing:
+            self._park_start_screen(existing["path"])
+        tmp.replace(dst)
+        return dst
+
+    def restore_start_screen(self) -> bool:
+        """Remove the custom start screen so the game shows its original one again.
+
+        The removed file is parked in .nwnmods/trash/, never deleted outright.
+        Returns True if a file was removed.
+        """
+        removed = False
+        ov = self.content_dir("override")
+        for ext in self.START_SCREEN_EXTS:
+            p = ov / f"{self.START_SCREEN_NAME}{ext}"
+            if p.exists():
+                self._park_start_screen(str(p))
+                removed = True
+        return removed
+
+    def _park_start_screen(self, path):
+        """Move a start screen file into .nwnmods/trash/ (safe, reversible)."""
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        trash = self.base / "trash" / f"startscreen-{ts}"
+        trash.mkdir(parents=True, exist_ok=True)
+        target = trash / Path(path).name
+        try:
+            shutil.move(str(path), str(target))
+        except OSError:
+            shutil.copy2(str(path), str(target))
+            Path(path).unlink(missing_ok=True)
+
     PARTY_FOLDERS = ("saves", "localvault", "servervault", "dmvault")
 
     def _save_set_dir(self, mod):
