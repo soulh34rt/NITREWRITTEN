@@ -3,7 +3,7 @@
 # NITREWRITTEN
 ### The definitive Mod Manager for Neverwinter Nights
 
-NITREWRITTEN was created with a single purpose: to give Linux users a reliable, modern mod manager for Neverwinter Nights (Enhanced Edition and Diamond). It runs natively on Linux and is also available for Windows.
+NITREWRITTEN was created with a single purpose, to give Linux users a reliable, modern mod manager for Neverwinter Nights (Enhanced Edition and Diamond). It runs natively on Linux and is also available for Windows.
 
 Built with a focus on simplicity and reliability, it keeps your game clean while offering advanced features for power users.
 
