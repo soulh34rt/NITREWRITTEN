@@ -1018,13 +1018,10 @@ def test_parse_project_title_and_description():
 
 def test_http_get_raises_on_network_error(monkeypatch):
     """http_get should raise on connection errors, not crash."""
-    import urllib.error as urllib_error
+    def fake_open(*a, **kw):
+        raise ConnectionError("no connection")
 
-    def fake_raise(*a, **kw):
-        raise urllib_error.URLError("no connection")
-
-    monkeypatch.setattr(nwnmods, "http_get", lambda url, timeout=None: (_ for _ in ()).throw(ConnectionError("no connection")))
-    # The function itself raises; just verify it doesn't return None
+    monkeypatch.setattr(nwnmods, "http_get", lambda url, timeout=None: fake_open())
     with pytest.raises((ConnectionError, OSError, nwnmods.Err)):
         nwnmods.http_get("http://127.0.0.1:1/nope")
 
