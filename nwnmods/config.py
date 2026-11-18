@@ -20,7 +20,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False, "splash_enabled": False, "splash_image": None, "splash_ms": 2000}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False, "splash_enabled": False, "splash_image": None, "splash_ms": 2000, "vault_cache_mb": 200, "vault_view": "list"}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))

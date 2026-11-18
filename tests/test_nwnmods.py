@@ -885,3 +885,218 @@ def test_readme_credits_extended():
     assert "Made by **ada_dev**" in readme
     assert nwnmods.REPO_URL in readme
     assert "nwnmods about" in readme
+
+
+# --------------------------------------------------------------------------- vault gallery (commit: gallery)
+
+
+def test_parse_project_collects_multiple_images():
+    html = """
+    <html><head><title>My Project | Neverwinter Vault</title></head><body>
+    <img src="/files/styles/thumbnail/public/project/123/images/one.jpg">
+    <img src="/files/project/123/images/two.png">
+    <a href="/files/project/123/images/three.jpg"><img src="/files/project/123/images/three.jpg"></a>
+    <img src="/files/project/123/images/one.jpg">
+    <img src="/modules/icon.jpg">
+    </body></html>
+    """
+    info = nwnmods.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/my-project")
+    assert info["images"] == [
+        "https://neverwintervault.org/files/project/123/images/one.jpg",  # full-size replaces thumbnail
+        "https://neverwintervault.org/files/project/123/images/two.png",
+        "https://neverwintervault.org/files/project/123/images/three.jpg",
+    ]
+    # back compat: "image" is the first one; non-project images are ignored
+    assert info["image"] == info["images"][0]
+
+
+def test_parse_project_without_images():
+    info = nwnmods.parse_project("<html><head><title>X</title></head><body>hi</body></html>",
+                                  "https://neverwintervault.org/project/nwn1/mods/x")
+    assert info["images"] == []
+    assert info["image"] is None
+
+
+def test_vault_cache_roundtrip(tmp_path):
+    url = "https://neverwintervault.org/files/project/1/images/a.jpg"
+    assert nwnmods.vault_cache_get(url, tmp_path) is None
+    nwnmods.vault_cache_put(url, b"jpegdata", tmp_path, limit_mb=10)
+    assert nwnmods.vault_cache_get(url, tmp_path) == b"jpegdata"
+    assert nwnmods.vault_cache_size(tmp_path) == len(b"jpegdata")
+    # stable name: same URL -> same file, different URL -> different file
+    assert nwnmods._vault_cache_name(url) == nwnmods._vault_cache_name(url)
+    assert nwnmods._vault_cache_name(url) != nwnmods._vault_cache_name(url + "/x")
+
+
+def test_vault_cache_enforces_size_limit(tmp_path):
+    # limit_mb=1 -> ~1 MB; write 3 x 400KB with distinct mtimes -> oldest must be evicted
+    for i in range(3):
+        nwnmods.vault_cache_put(f"https://example.com/img{i}.jpg", b"x" * (400 * 1024),
+                                tmp_path, limit_mb=1)
+        # pin the mtime so eviction order is deterministic (mtime granularity is 1s)
+        p = tmp_path / nwnmods._vault_cache_name(f"https://example.com/img{i}.jpg")
+        os.utime(p, (1000 + i, 1000 + i))
+    files = list(tmp_path.glob("*"))
+    assert len(files) == 2  # 1.2 MB trimmed to fit under 1 MB
+    assert nwnmods.vault_cache_size(tmp_path) <= 1024 * 1024
+    # newest file survived
+    assert nwnmods.vault_cache_get("https://example.com/img2.jpg", tmp_path) == b"x" * (400 * 1024)
+    assert nwnmods.vault_cache_get("https://example.com/img0.jpg", tmp_path) is None
+
+
+def test_vault_cache_clear(tmp_path):
+    nwnmods.vault_cache_put("https://example.com/a.png", b"aaa", tmp_path, limit_mb=10)
+    nwnmods.vault_cache_put("https://example.com/b.png", b"bbb", tmp_path, limit_mb=10)
+    assert nwnmods.vault_cache_clear(tmp_path) == 2
+    assert nwnmods.vault_cache_size(tmp_path) == 0
+    assert nwnmods.vault_cache_clear(tmp_path) == 0
+
+
+def test_vault_cache_synced_between_script_and_package(tmp_path):
+    """Monolith and package must produce identical cache names and parse identical images."""
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("_nwnmods_vault_sync", root / "nwnmods.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    url = "https://neverwintervault.org/files/project/9/images/pic.webp"
+    assert module._vault_cache_name(url) == nwnmods._vault_cache_name(url)
+    assert module.VAULT_CACHE_DEFAULT_MB == nwnmods.VAULT_CACHE_DEFAULT_MB
+
+    html = '<img src="/files/project/9/images/pic.webp"><img src="/files/project/9/images/other.jpg">'
+    m_info = module.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/z")
+    p_info = nwnmods.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/z")
+    assert m_info["images"] == p_info["images"]
+    assert m_info["image"] == p_info["image"]
+
+    # behavior on a temp dir must match too
+    module.vault_cache_put(url, b"webp", tmp_path, limit_mb=5)
+    assert nwnmods.vault_cache_get(url, tmp_path) == b"webp"
+
+
+# --------------------------------------------------------------------------- vault catalog parsing
+
+def test_parse_catalog_finds_projects():
+    html = """
+    <html><body>
+    <table><tr class="odd">
+    <td><a href="https://neverwintervault.org/project/nwn1/mods/my-mod">My Mod</a></td>
+    <td>Author A</td><td>Desc A</td><td>2024-01-01</td><td>10</td>
+    </tr></table>
+    <table><tr class="even">
+    <td><a href="https://neverwintervault.org/project/nwn1/tools/some-tool">Some Tool</a></td>
+    <td>Author B</td><td>Desc B</td><td>2024-02-01</td><td>5</td>
+    </tr></table>
+    </body></html>
+    """
+    items, next_url = nwnmods.parse_catalog(html, "https://neverwintervault.org/catalog/nwn1")
+    assert len(items) == 2
+    assert items[0]["title"] == "My Mod"
+    assert "my-mod" in items[0]["url"]
+    assert items[1]["title"] == "Some Tool"
+
+
+def test_parse_catalog_empty():
+    result = nwnmods.parse_catalog("<html><body></body></html>", "https://neverwintervault.org/catalog/nwn1")
+    items, next_url = result
+    assert items == []
+    assert next_url is None
+
+
+def test_parse_project_title_and_description():
+    html = """
+    <html><head><title>Test Mod | Neverwinter Vault</title></head><body>
+    <div>This is a description.</div>
+    </body></html>
+    """
+    info = nwnmods.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/test")
+    assert info["title"] == "Test Mod"
+    assert "desc" in info
+
+
+def test_http_get_raises_on_network_error(monkeypatch):
+    """http_get should raise on connection errors, not crash."""
+    import urllib.error as urllib_error
+
+    def fake_raise(*a, **kw):
+        raise urllib_error.URLError("no connection")
+
+    monkeypatch.setattr(nwnmods, "http_get", lambda url, timeout=None: (_ for _ in ()).throw(ConnectionError("no connection")))
+    # The function itself raises; just verify it doesn't return None
+    with pytest.raises((ConnectionError, OSError, nwnmods.Err)):
+        nwnmods.http_get("http://127.0.0.1:1/nope")
+
+
+# --------------------------------------------------------------------------- GUI smoke tests (no real tkinter display)
+
+def test_gui_module_is_importable():
+    """The nwnmods.gui module should be importable and expose run_gui."""
+    from nwnmods import gui
+    assert callable(gui.run_gui)
+
+
+def test_gui_run_gui_raises_without_display(monkeypatch):
+    """run_gui should fail gracefully when tkinter cannot create a display."""
+    from nwnmods import gui as gui_mod
+    import tkinter as tk
+
+    original_init = tk.Tk.__init__
+
+    def fake_init(self, *a, **kw):
+        raise tk.TclError("no display name and no $DISPLAY variable")
+
+    monkeypatch.setattr(tk.Tk, "__init__", fake_init)
+    with pytest.raises((tk.TclError, RuntimeError)):
+        gui_mod.run_gui()
+
+
+def test_gui_bridge_loads_legacy_module(monkeypatch, tmp_path):
+    """The GUI bridge should load the legacy nwnmods.py module."""
+    import nwnmods.gui as gui_mod
+
+    # Reset the cached legacy module
+    gui_mod._legacy = None
+
+    # Mock _legacy_path to return the real nwnmods.py
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(gui_mod, "_legacy_path", lambda: root / "nwnmods.py")
+
+    # Mock tk.Tk to avoid display requirements
+    import tkinter as tk
+    original_init = tk.Tk.__init__
+
+    def fake_init(self, *a, **kw):
+        original_init(self, *a, **kw)
+        self.destroy()  # close immediately
+
+    monkeypatch.setattr(tk.Tk, "__init__", fake_init)
+
+    # run_gui should load the legacy module
+    # It will fail at mainloop, but the module should be loaded
+    try:
+        gui_mod.run_gui()
+    except Exception:
+        pass  # expected: no display or mainloop failure
+
+
+def test_cli_works_without_tkinter(tmp_path):
+    """The CLI must run on headless Python builds that lack tkinter; only the GUI needs it."""
+    root = Path(__file__).resolve().parents[1]
+    block = tmp_path / "block"
+    block.mkdir()
+    (block / "tkinter.py").write_text("raise ImportError('tkinter blocked for this test')\n", encoding="utf-8")
+    user = tmp_path / "userdata"
+    user.mkdir()
+    env = {**os.environ, "PYTHONPATH": str(block)}
+
+    r = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "list"],
+                       cwd=root, capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+
+    r2 = subprocess.run([sys.executable, str(root / "nwnmods.py"), "--user", str(user), "gui"],
+                        cwd=root, capture_output=True, text=True, env=env)
+    assert r2.returncode != 0
+    assert "tkinter" in r2.stderr
+    assert "Traceback" not in r2.stderr

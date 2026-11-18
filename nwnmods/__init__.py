@@ -14,8 +14,9 @@ from .files import (CONTENT_DIRS, DEST, IGNORE_EXT, IGNORE_NAMES, KNOWN, LOWER_D
                     _safe_member_name, _strip_symlinks, download, extract, fetch_bytes, map_path)
 from .gui import run_gui
 from .library import Library
-from .vault import (FIELD_LABELS, VAULT, VAULT_GAMES, VAULT_TTL, _Blocks, _CatalogParser, http_get,
-                    parse_catalog, parse_project, vault_catalog)
+from .vault import (FIELD_LABELS, VAULT, VAULT_CACHE_DEFAULT_MB, VAULT_GAMES, VAULT_TTL, _Blocks, _CatalogParser,
+                    _vault_cache_name, http_get, parse_catalog, parse_project, vault_cache_clear, vault_cache_dir,
+                    vault_cache_get, vault_cache_put, vault_cache_size, vault_catalog)
 
 
 CFG = _config.CFG

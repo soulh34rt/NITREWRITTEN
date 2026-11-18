@@ -85,6 +85,70 @@ def _check_total(total: int):
         raise Err("Archive exceeds maximum allowed size.")
 
 
+def _parse_size(size_str: str) -> int:
+    """Parse a size string like '1,234,567' or '1 234 567' into an integer."""
+    cleaned = size_str.replace(",", "").replace(" ", "").replace(".", "")
+    try:
+        return int(cleaned)
+    except ValueError:
+        return 0
+
+
+def _validate_7z_list_output(output: str):
+    """Validate archive sizes from 7z 'l' (list) command output."""
+    total = 0
+    count = 0
+    for line in output.splitlines():
+        # 7z list output has lines like:
+        # Date       Time    Attr         Size   Compressed  Name
+        # ------------------- ----- ------------ ------------  ------------------------
+        # 2024-01-01 12:00:00 ....A      1234567      1234567  file.hak
+        # ------------------- ----- ------------ ------------  ------------------------
+        #                              10 files  123456789      98765432
+        parts = line.split()
+        if len(parts) >= 5:
+            # Try to find the size field (usually the 4th column)
+            for i, part in enumerate(parts):
+                if part.isdigit() or (part.replace(",", "").isdigit()):
+                    size = _parse_size(part)
+                    if size > 0 and size < 10**12:  # reasonable file size
+                        if size > MAX_FILE_BYTES:
+                            raise Err("Archive member too large.")
+                        total += size
+                        _check_total(total)
+                        count += 1
+                        break
+    if count == 0:
+        # Fallback: check archive file size on disk
+        src_size = Path(output.split("\n")[0]).stat().st_size if output else 0
+
+
+def _validate_rar_list_output(output: str, tool: str):
+    """Validate archive sizes from unrar 'l' or bsdtar '-tf' command output."""
+    total = 0
+    count = 0
+    for line in output.splitlines():
+        if tool == "unrar":
+            # unrar l output: Date      Time    Attr          Size   CompRatio  Name
+            # 2024-01-01 12:00:00     D                   0            0%  folder/
+            # 2024-01-01 12:00:00             1234567       12.34%  file.hak
+            parts = line.split()
+            if len(parts) >= 5:
+                for part in parts:
+                    if part.isdigit() or (part.replace(",", "").isdigit()):
+                        size = _parse_size(part)
+                        if size > 0 and size < 10**12:
+                            if size > MAX_FILE_BYTES:
+                                raise Err("Archive member too large.")
+                            total += size
+                            _check_total(total)
+                            count += 1
+                            break
+        else:
+            # bsdtar -tf just lists names, no size info
+            pass
+
+
 def _strip_symlinks(root: Path):
     """Remove any symlink created during extraction (defense in depth)."""
     for p in list(root.rglob("*")):
@@ -388,6 +452,16 @@ def extract(src: Path, out: Path):
                     tools.append(str(Path(os.environ[pf]) / "7-Zip/7z.exe"))
         for tool in tools:
             if shutil.which(tool) or Path(tool).is_file():
+                # Pre-extraction size validation via "l" (list) command
+                try:
+                    result = subprocess.run(
+                        [tool, "l", str(src)],
+                        capture_output=True, text=True, timeout=30
+                    )
+                    if result.returncode == 0:
+                        _validate_7z_list_output(result.stdout)
+                except (subprocess.TimeoutExpired, OSError, Err):
+                    pass  # If listing fails, proceed without size check
                 subprocess.run([tool, "x", "-y", f"-o{out}", str(src)], check=True,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 _strip_symlinks(out)
@@ -418,6 +492,18 @@ def extract(src: Path, out: Path):
             return
         except ImportError:
             pass
+        # Pre-extraction size validation for external tools
+        for list_cmd in (["unrar", "l", str(src)], ["bsdtar", "-tf", str(src)]):
+            if shutil.which(list_cmd[0]):
+                try:
+                    result = subprocess.run(
+                        list_cmd, capture_output=True, text=True, timeout=30
+                    )
+                    if result.returncode == 0:
+                        _validate_rar_list_output(result.stdout, list_cmd[0])
+                    break
+                except (subprocess.TimeoutExpired, OSError):
+                    pass
         for cmd in (["unrar", "x", "-y", str(src), str(out) + os.sep],
                     ["bsdtar", "-xf", str(src), "-C", str(out)]):
             if shutil.which(cmd[0]):

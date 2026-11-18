@@ -7,6 +7,7 @@ ENV/
 build/
 dist/
 *.spec
+!NITREWRITTEN.spec
 .idea/
 .vscode/
 *.bak

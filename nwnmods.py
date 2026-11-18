@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import html as htmlmod
 import io
 import json
@@ -28,8 +29,11 @@ import tarfile
 import tempfile
 import threading
 import time
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+try:  # tkinter is only needed for the GUI; the CLI must work without it (headless servers)
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, simpledialog, ttk
+except ImportError:  # pragma: no cover - depends on the Python build
+    tk = filedialog = messagebox = simpledialog = ttk = None
 import urllib.request
 import webbrowser
 import zipfile
@@ -137,7 +141,7 @@ CFG = cfg_dir() / "config.json"
 
 
 def load_cfg() -> dict:
-    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False, "splash_enabled": False, "splash_image": None, "splash_ms": 2000}
+    d = {"manual": [], "lowercase": True, "policy": "ask", "last": None, "user_override": {}, "ffmpeg_path": None, "convert_bik": True, "ext_map": None, "ignore_ext": None, "ignore_names": None, "folder_aliases": {}, "installations": {}, "basic_mode": False, "splash_enabled": False, "splash_image": None, "splash_ms": 2000, "vault_cache_mb": 200, "vault_view": "list"}
     try:
         if CFG.exists():
             d.update(json.loads(CFG.read_text(encoding="utf-8")))
@@ -885,6 +889,87 @@ def fetch_bytes(url: str, timeout=30, max_bytes=MAX_TOTAL_BYTES) -> bytes:
 VAULT = "https://neverwintervault.org"
 VAULT_GAMES = {"NWN:EE": "nwnee", "NWN 1": "nwn1", "All": "all"}
 VAULT_TTL = 6 * 3600  # catalog is cached for 6h to avoid excessive requests
+VAULT_CACHE_DEFAULT_MB = 200  # default disk cache limit for Vault images
+
+
+# --------------------------------------------------------------------------- image disk cache
+def vault_cache_dir(directory=None) -> Path:
+    """Cache folder for downloaded Vault images (overridable for tests)."""
+    return Path(directory) if directory else cfg_dir() / "vault_cache"
+
+
+def _vault_cache_name(url: str) -> str:
+    """Stable file name for a URL: sha1 + image extension from the URL path."""
+    ext = Path(urlparse(url).path).suffix.lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"):
+        ext = ".img"
+    return hashlib.sha1(url.encode("utf-8")).hexdigest() + ext
+
+
+def vault_cache_get(url: str, directory=None) -> bytes | None:
+    p = vault_cache_dir(directory) / _vault_cache_name(url)
+    try:
+        return p.read_bytes() if p.is_file() else None
+    except OSError:
+        return None
+
+
+def vault_cache_size(directory=None) -> int:
+    d = vault_cache_dir(directory)
+    try:
+        return sum(f.stat().st_size for f in d.glob("*") if f.is_file())
+    except OSError:
+        return 0
+
+
+def _vault_cache_enforce(d: Path, limit_bytes: int) -> None:
+    """Delete oldest files (by mtime) until the cache fits under limit_bytes."""
+    try:
+        files = [f for f in d.glob("*") if f.is_file()]
+        files.sort(key=lambda f: f.stat().st_mtime)
+    except OSError:
+        return
+    total = sum(f.stat().st_size for f in files)
+    for f in files:
+        if total <= limit_bytes:
+            break
+        try:
+            sz = f.stat().st_size
+            f.unlink()
+            total -= sz
+        except OSError:
+            pass
+
+
+def vault_cache_put(url: str, data: bytes, directory=None, limit_mb=None) -> None:
+    """Store an image on disk and enforce the size limit (oldest files first)."""
+    d = vault_cache_dir(directory)
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        (d / _vault_cache_name(url)).write_bytes(data)
+    except OSError:
+        return
+    if limit_mb is None:
+        limit_mb = load_cfg().get("vault_cache_mb", VAULT_CACHE_DEFAULT_MB)
+    try:
+        limit_mb = max(1, int(limit_mb))
+    except (TypeError, ValueError):
+        limit_mb = VAULT_CACHE_DEFAULT_MB
+    _vault_cache_enforce(d, limit_mb * 1024 * 1024)
+
+
+def vault_cache_clear(directory=None) -> int:
+    """Remove every cached image; returns the number of files deleted."""
+    d = vault_cache_dir(directory)
+    n = 0
+    try:
+        for f in d.glob("*"):
+            if f.is_file():
+                f.unlink()
+                n += 1
+    except OSError:
+        pass
+    return n
 
 
 def http_get(url: str, timeout=40) -> str:
@@ -924,6 +1009,8 @@ class _CatalogParser(HTMLParser):
             self._cell = {"t": [], "h": []}
         elif tag == "a" and self._cell is not None and a.get("href"):
             self._cell["h"].append(a["href"])
+        elif tag == "img" and self._cell is not None and a.get("src"):
+            self._cell["img"] = a["src"]  # capture thumbnail
         elif tag == "br" and self._cell is not None:
             self._cell["t"].append(" ")
 
@@ -953,10 +1040,12 @@ class _CatalogParser(HTMLParser):
         parts = urlparse(url).path.strip("/").split("/")  # project/<game>/<category...>/<slug>
         get = lambda k: texts[k] if k < len(texts) else ""  # noqa: E731
         votes = texts[-1] if texts and texts[-1].lstrip("-").isdigit() else "0"
+        img = next((c.get("img") for c in row if c.get("img")), None)
         self.items.append({
             "title": texts[idx], "url": url, "game": parts[1] if len(parts) > 1 else "",
             "cat": self.cat or (parts[2].replace("-", " ").title() if len(parts) > 2 else ""),
-            "author": get(idx + 1), "desc": get(idx + 2), "posted": get(idx + 3), "votes": int(votes)})
+            "author": get(idx + 1), "desc": get(idx + 2), "posted": get(idx + 3), "votes": int(votes),
+            "image": urljoin(self.base, htmlmod.unescape(img)) if img else None})
 
 
 def parse_catalog(html: str, base: str):
@@ -1062,9 +1151,23 @@ def parse_project(html: str, url: str) -> dict:
             if href not in seen:
                 seen.add(href)
                 files.append({"url": href, "name": label or Path(urlparse(href).path).name or "file"})
-    m = re.search(r'src="([^"]*/files/(?:styles/[^/"]+/public/)?project/\d+/images/[^"]+)"', html)
-    image = urljoin(url, htmlmod.unescape(m.group(1))) if m else None
-    return {"title": title, "url": url, "desc": desc, "fields": fields, "files": files, "image": image}
+    # All project images (page order, deduped by file name: full-size wins over thumbnail);
+    # "image" stays the first one (back compat).
+    order, by_name = [], {}
+    pat_img = r'(?:src|href)="([^"]*/files/(?:styles/[^/"]+/public/)?project/\d+/images/[^"]+)"'
+    for m in re.finditer(pat_img, html, re.I):
+        u = urljoin(url, htmlmod.unescape(m.group(1)))
+        name = Path(urlparse(u).path).name.lower()
+        is_thumb = "/styles/" in u
+        if name not in by_name:
+            by_name[name] = [u, is_thumb]
+            order.append(name)
+        elif by_name[name][1] and not is_thumb:
+            by_name[name][0] = u  # same file, full-size version replaces the thumbnail
+    imgs = [by_name[n][0] for n in order]
+    image = imgs[0] if imgs else None
+    return {"title": title, "url": url, "desc": desc, "fields": fields, "files": files,
+            "image": image, "images": imgs}
 
 
 # --------------------------------------------------------------------------- biblioteca
@@ -2283,6 +2386,10 @@ def _show_splash(root, cfg):
 
 
 def run_gui(initial_user=None):
+    if tk is None:
+        raise SystemExit("The graphical interface requires tkinter (Linux: install python3-tk). "
+                         "The command-line interface works without it.")
+
     class App(tk.Tk):
         def __init__(self):
             super().__init__()
