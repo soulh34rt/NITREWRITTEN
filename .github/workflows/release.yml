@@ -42,7 +42,7 @@ jobs:
           pip install pyinstaller
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --name NITREWRITTEN --icon resources/pluma.ico --add-data "resources;resources" --add-data "resources/tools;tools" --add-data "nwnmods.py;." nwnmods.py
+          pyinstaller --onefile --noconsole --name NITREWRITTEN --icon resources/pluma.ico --add-data "resources;resources" --add-data "resources/tools;tools" nwnmods.py
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
@@ -70,7 +70,7 @@ jobs:
           pip install pyinstaller
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --name NITREWRITTEN --add-data "resources:resources" --add-data "resources/tools:tools" --add-data "nwnmods.py:." nwnmods.py
+          pyinstaller --onefile --noconsole --name NITREWRITTEN --add-data "resources:resources" --add-data "resources/tools:tools" nwnmods.py
           mv dist/NITREWRITTEN dist/NITREWRITTEN-linux
       - name: Build AppImage
         run: |
