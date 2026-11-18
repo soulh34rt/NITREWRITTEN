@@ -5,7 +5,7 @@ a = Analysis(
     ['nwnmods.py'],
     pathex=[],
     binaries=[],
-    datas=[('resources', 'resources'), ('resources/tools', 'tools'), ('nwnmods.py', '.')],
+    datas=[('resources', 'resources'), ('resources/tools', 'tools')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
