@@ -1049,33 +1049,13 @@ def test_gui_run_gui_raises_without_display(monkeypatch):
         gui_mod.run_gui()
 
 
-def test_gui_bridge_loads_legacy_module(monkeypatch, tmp_path):
-    """The GUI bridge should load the legacy nwnmods.py module."""
+def test_gui_module_has_no_legacy_bridge():
+    """The GUI module is now self-contained; the old bridge pattern (_legacy, _legacy_path) is gone."""
     import nwnmods.gui as gui_mod
-
-    # Reset the cached legacy module
-    gui_mod._legacy = None
-
-    # Mock _legacy_path to return the real nwnmods.py
-    root = Path(__file__).resolve().parents[1]
-    monkeypatch.setattr(gui_mod, "_legacy_path", lambda: root / "nwnmods.py")
-
-    # Mock tk.Tk to avoid display requirements
-    import tkinter as tk
-    original_init = tk.Tk.__init__
-
-    def fake_init(self, *a, **kw):
-        original_init(self, *a, **kw)
-        self.destroy()  # close immediately
-
-    monkeypatch.setattr(tk.Tk, "__init__", fake_init)
-
-    # run_gui should load the legacy module
-    # It will fail at mainloop, but the module should be loaded
-    try:
-        gui_mod.run_gui()
-    except Exception:
-        pass  # expected: no display or mainloop failure
+    assert not hasattr(gui_mod, "_legacy")
+    assert not hasattr(gui_mod, "_legacy_path")
+    # run_gui should be a real function, not a bridge
+    assert callable(gui_mod.run_gui)
 
 
 def test_cli_works_without_tkinter(tmp_path):

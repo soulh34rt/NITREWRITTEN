@@ -11,7 +11,7 @@ from .cli import cli, main, pick
 from .detection import (Game, classify, detect_all, documents_dir, ee_user_dir, launch, open_path, other_bases,
                         safe_dirs, steam_libraries, steam_workshop_items)
 from .files import (CONTENT_DIRS, DEST, IGNORE_EXT, IGNORE_NAMES, KNOWN, LOWER_DIRS, _inside, _safe_filename,
-                    _safe_member_name, _strip_symlinks, download, extract, fetch_bytes, map_path)
+                    _safe_member_name, _strip_symlinks, download, extract, fetch_bytes, map_path, setup_7zip)
 from .gui import run_gui
 from .library import Library
 from .vault import (FIELD_LABELS, VAULT, VAULT_CACHE_DEFAULT_MB, VAULT_GAMES, VAULT_TTL, _Blocks, _CatalogParser,
