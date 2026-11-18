@@ -67,6 +67,13 @@ If you prefer to run from source or contribute:
    python nwnmods.py
    ```
 
+### Architecture
+
+The application logic lives entirely in the `nwnmods` package (`config`, `detection`,
+`files`, `vault`, `library`, `gui`, `cli`). `nwnmods.py` is a thin entry-point
+wrapper that calls `nwnmods.cli.main`; `python -m nwnmods` works the same way.
+The migration from the original monolith is complete; see
+`docs/MODULE_SPLIT.md` for the module breakdown.
 ---
 
 ## 4. COMMAND LINE INTERFACE
