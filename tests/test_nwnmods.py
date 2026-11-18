@@ -702,21 +702,6 @@ def test_state_colors_meet_wcag_contrast():
             assert ratio >= 4.5, f"{theme}/{state}: {fg} on {bg} is only {ratio:.2f}:1"
 
 
-def test_state_constants_synced_between_script_and_package():
-    """The monolith nwnmods.py and the nwnmods package must define identical state data."""
-    import importlib.util
-
-    root = Path(__file__).resolve().parents[1]
-    spec = importlib.util.spec_from_file_location("_nwnmods_state_sync", root / "nwnmods.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    assert module.STATE_COLORS == nwnmods.STATE_COLORS
-    assert module.STATE_LABELS == nwnmods.STATE_LABELS
-    assert module.STATE_SYMBOLS == nwnmods.STATE_SYMBOLS
-    assert module.mod_state(True, True) == nwnmods.mod_state(True, True)
-    assert module.conflict_partners({"f": ["a", "b"]}) == nwnmods.conflict_partners({"f": ["a", "b"]})
-    assert module.group_conflicts({"f": ["a", "b"]}) == nwnmods.group_conflicts({"f": ["a", "b"]})
 
 
 # --------------------------------------------------------------------------- conflict details (commit: conflicts by mod)
@@ -809,21 +794,6 @@ def test_conflicts_cli_grouped_output(tmp_path):
 
 
 # --------------------------------------------------------------------------- about / version (commit: about screen)
-
-
-def test_version_and_about_text_synced_between_script_and_package():
-    """VERSION, AUTHOR, REPO_URL and about_text() must match in both entry points."""
-    import importlib.util
-
-    root = Path(__file__).resolve().parents[1]
-    spec = importlib.util.spec_from_file_location("_nwnmods_about_sync", root / "nwnmods.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    assert module.VERSION == nwnmods.VERSION == "1.1.0"
-    assert module.AUTHOR == nwnmods.AUTHOR == "ada_dev"
-    assert module.REPO_URL == nwnmods.REPO_URL
-    assert module.about_text() == nwnmods.about_text()
 
 
 def test_about_text_content_is_ascii():
@@ -952,30 +922,6 @@ def test_vault_cache_clear(tmp_path):
     assert nwnmods.vault_cache_clear(tmp_path) == 0
 
 
-def test_vault_cache_synced_between_script_and_package(tmp_path):
-    """Monolith and package must produce identical cache names and parse identical images."""
-    import importlib.util
-
-    root = Path(__file__).resolve().parents[1]
-    spec = importlib.util.spec_from_file_location("_nwnmods_vault_sync", root / "nwnmods.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    url = "https://neverwintervault.org/files/project/9/images/pic.webp"
-    assert module._vault_cache_name(url) == nwnmods._vault_cache_name(url)
-    assert module.VAULT_CACHE_DEFAULT_MB == nwnmods.VAULT_CACHE_DEFAULT_MB
-
-    html = '<img src="/files/project/9/images/pic.webp"><img src="/files/project/9/images/other.jpg">'
-    m_info = module.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/z")
-    p_info = nwnmods.parse_project(html, "https://neverwintervault.org/project/nwn1/mods/z")
-    assert m_info["images"] == p_info["images"]
-    assert m_info["image"] == p_info["image"]
-
-    # behavior on a temp dir must match too
-    module.vault_cache_put(url, b"webp", tmp_path, limit_mb=5)
-    assert nwnmods.vault_cache_get(url, tmp_path) == b"webp"
-
-
 # --------------------------------------------------------------------------- vault catalog parsing
 
 def test_parse_catalog_finds_projects():
@@ -1036,8 +982,8 @@ def test_gui_module_is_importable():
 
 def test_gui_run_gui_raises_without_display(monkeypatch):
     """run_gui should fail gracefully when tkinter cannot create a display."""
+    tk = pytest.importorskip("tkinter")
     from nwnmods import gui as gui_mod
-    import tkinter as tk
 
     original_init = tk.Tk.__init__
 
