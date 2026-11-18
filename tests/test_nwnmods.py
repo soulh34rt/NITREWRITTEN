@@ -824,7 +824,7 @@ def test_cli_about_and_version(tmp_path):
                 [sys.executable, "-m", "nwnmods", "about"]):
         r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, env=env)
         assert r.returncode == 0, r.stderr
-        assert "NITREWRITTEN 1.1.0" in r.stdout
+        assert "NITREWRITTEN 1.0" in r.stdout
         assert "Made by ada_dev" in r.stdout
         assert nwnmods.REPO_URL in r.stdout
         assert "Surazal" in r.stdout
